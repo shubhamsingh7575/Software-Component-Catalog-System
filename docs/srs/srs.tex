@@ -5,6 +5,9 @@
 \usepackage{array}
 \usepackage{geometry}
 \geometry{a4paper, margin=1in}
+\hypersetup{hidelinks}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
 
 \title{\textbf{Software Requirement Specification (SRS)}\\
 \large Software Component Cataloguing System}
@@ -75,22 +78,50 @@ The major functions of the system include:
 
 \section{User Classes}
 \begin{itemize}
-    \item \textbf{Admin (Cataloguer):} Responsible for managing components
-    \item \textbf{User (Developer):} Searches and uses components
+    \item \textbf{User (Developer):}
+    \begin{itemize}
+        \item The user interacts with the system to search, browse, and utilize reusable software components.
+        \item Users can query the catalogue using keywords to find relevant components.
+        \item Users can view component details such as type, usage statistics, and associated metadata.
+        \item Users indirectly contribute to the system by increasing usage statistics when components are accessed or reused.
+    \end{itemize}
 \end{itemize}
 
-\section{Operating Environment}
+\section{Tech Stack}
+
+The Software Component Cataloguing System is developed using a modern web-based technology stack to ensure scalability, performance, and ease of maintenance.
+
 \begin{itemize}
-    \item OS: Windows, Linux, MacOS
-    \item Backend: Any server-side technology (Node.js / .NET / Java)
-    \item Database: SQL / NoSQL
+    \item \textbf{Frontend:}
+    \begin{itemize}
+        \item React.js for building an interactive and dynamic user interface
+        \item JavaSwing for structure and styling
+    \end{itemize}
+    
+    \item \textbf{Backend:}
+    \begin{itemize}
+        \item Spring boot for handling server-side logic and API development
+        \item RESTful APIs for communication between frontend and backend
+    \end{itemize}
+    
+    \item \textbf{Database:}
+    \begin{itemize}
+        \item SQL (mySQL database) for storing component data and metadata
+        \item Flexible schema to handle different types of components (code/design)
+    \end{itemize}
+    
+    \item \textbf{Operating System Support:}
+    \begin{itemize}
+        \item Compatible with Windows, Linux, and MacOS environments
+    \end{itemize}
 \end{itemize}
 
 %--------------------------------------------------
 \chapter{System Features}
 
 \section{Feature 1: Add Component}
-\textbf{Description:} Admin can add new components into the catalogue.
+
+\textbf{Description:} The user can add new software components into the catalogue. This feature allows the system to grow continuously by storing reusable components along with their associated metadata.
 
 \textbf{Inputs:}
 \begin{itemize}
@@ -101,13 +132,14 @@ The major functions of the system include:
 
 \textbf{Processing:}
 \begin{itemize}
-    \item Validate inputs
-    \item Store in database
+    \item The system validates the input data provided by the user
+    \item Ensures that mandatory fields are not empty
+    \item Stores the component information in the database
 \end{itemize}
 
 \textbf{Output:}
 \begin{itemize}
-    \item Confirmation message
+    \item Confirmation message indicating successful addition of the component
 \end{itemize}
 
 \section{Feature 2: Search Component}
@@ -123,6 +155,56 @@ System maintains:
 \begin{itemize}
     \item Number of times component used
     \item Number of times searched but not used
+\end{itemize}
+
+\section{Feature 4: User Registration (Sign Up)}
+
+\textbf{Description:} This feature allows a new user to create an account in the system. Registration is required to access the functionalities of the Software Component Cataloguing System.
+
+\textbf{Inputs:}
+\begin{itemize}
+    \item Username
+    \item Email Address
+    \item Password
+    \item Confirm Password
+\end{itemize}
+
+\textbf{Processing:}
+\begin{itemize}
+    \item The system validates all input fields
+    \item Checks whether the email already exists in the database
+    \item Verifies password strength and confirmation match
+    \item Encrypts the password for secure storage
+    \item Stores the user details in the database
+\end{itemize}
+
+\textbf{Output:}
+\begin{itemize}
+    \item Successful registration message
+    \item Redirect to login page
+\end{itemize}
+
+\section{Feature 5: User Login}
+
+\textbf{Description:} This feature allows registered users to securely log in to the system and access its functionalities such as searching and managing components.
+
+\textbf{Inputs:}
+\begin{itemize}
+    \item Email Address
+    \item Password
+\end{itemize}
+
+\textbf{Processing:}
+\begin{itemize}
+    \item The system verifies the entered credentials with stored data
+    \item Password is validated using encrypted comparison
+    \item If credentials are correct, user session is created
+\end{itemize}
+
+\textbf{Output:}
+\begin{itemize}
+    \item Successful login and access to dashboard
+    \item Error message for invalid credentials
 \end{itemize}
 
 %--------------------------------------------------
@@ -207,10 +289,29 @@ System should handle thousands of components efficiently.
 
 \begin{figure}[h!]
 \centering
-\fbox{\parbox{10cm}{
-Bar Chart showing usage frequency of components
-}}
-\caption{Usage Chart}
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    symbolic x coords={Component A, Component B, Component C, Component D, Component E},
+    xtick=data,
+    ylabel={Usage Frequency},
+    xlabel={Components},
+    nodes near coords,
+    bar width=15pt,
+    height=8cm,
+    width=12cm,
+    xticklabel style={rotate=30, anchor=east}
+]
+\addplot coordinates {
+    (Component A, 15)
+    (Component B, 25)
+    (Component C, 10)
+    (Component D, 30)
+    (Component E, 20)
+};
+\end{axis}
+\end{tikzpicture}
+\caption{Bar Chart showing usage frequency of components}
 \end{figure}
 
 %--------------------------------------------------
