@@ -212,18 +212,72 @@ System maintains:
 
 \section{Database Schema}
 
+The system database is designed to efficiently manage users, components, and catalogues. The schema follows a relational structure where entities are interconnected to support component organization and retrieval.
+
+\subsection{User Table}
+
 \begin{longtable}{|p{3cm}|p{3cm}|p{7cm}|}
 \hline
 \textbf{Field} & \textbf{Type} & \textbf{Description} \\
 \hline
-ComponentID & Integer & Unique ID \\
-Name & String & Component name \\
-Type & String & Code/Design \\
-Keywords & String & Search tags \\
-UsageCount & Integer & Usage frequency \\
-SearchMiss & Integer & Unused searches \\
+UserID & Integer & Unique identifier for each user \\
+Email & String & User's email address (unique) \\
+Password & String & Encrypted user password \\
+Username & String & Display name of the user \\
 \hline
 \end{longtable}
+
+\textbf{Relationship:} A user can create and manage multiple catalogues.
+
+\vspace{0.5cm}
+
+\subsection{Component Table}
+
+\begin{longtable}{|p{3cm}|p{3cm}|p{7cm}|}
+\hline
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\hline
+ComponentID & Integer & Unique identifier for each component \\
+ComponentName & String & Name of the component \\
+Description & Text & Detailed explanation of the component \\
+Keywords & String & Tags used for searching \\
+\hline
+\end{longtable}
+
+\textbf{Relationship:} A component can belong to one or more catalogues.
+
+\vspace{0.5cm}
+
+\subsection{Catalogue Table}
+
+\begin{longtable}{|p{3cm}|p{3cm}|p{7cm}|}
+\hline
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\hline
+CatalogueID & Integer & Unique identifier for catalogue \\
+CatalogueName & String & Name of the catalogue \\
+Description & Text & Description of the catalogue \\
+Keywords & String & Tags for searching catalogues \\
+\hline
+\end{longtable}
+
+\textbf{Relationship:}
+\begin{itemize}
+    \item A catalogue contains multiple components
+    \item A user can own multiple catalogues
+\end{itemize}
+
+\vspace{0.5cm}
+
+\subsection{Entity Relationship Overview}
+
+\begin{itemize}
+    \item One User → Many Catalogues
+    \item One Catalogue → Many Components
+    \item Components can be reused across multiple catalogues
+\end{itemize}
+
+This relational design ensures efficient storage, retrieval, and reuse of software components within the system.
 
 %--------------------------------------------------
 \chapter{System Models}
