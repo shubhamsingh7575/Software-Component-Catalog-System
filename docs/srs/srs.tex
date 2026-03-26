@@ -1,0 +1,221 @@
+\documentclass[12pt]{scrreprt}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+
+\title{\textbf{Software Requirement Specification (SRS)}\\
+\large Software Component Cataloguing System}
+\author{Prepared by: Shubham Singh}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+%--------------------------------------------------
+\chapter{Introduction}
+
+\section{Purpose}
+The purpose of this Software Requirement Specification (SRS) document is to provide a detailed description of the \textbf{Software Component Cataloguing System}. This system is designed to store, manage, and retrieve reusable software components efficiently.
+
+In modern software development, reuse of components significantly reduces development time and cost. However, without proper organization, locating reusable components becomes difficult. This system addresses that issue by providing a centralized catalogue.
+
+\section{Scope}
+The system will:
+\begin{itemize}
+    \item Maintain a repository of reusable software components
+    \item Support both design (UML, ERD) and code components
+    \item Allow keyword-based searching
+    \item Track usage statistics of components
+    \item Support hierarchical classification of components
+\end{itemize}
+
+\section{Intended Audience}
+This document is intended for:
+\begin{itemize}
+    \item Developers
+    \item System Designers
+    \item Project Managers
+    \item Testers
+\end{itemize}
+
+\vfill{}
+\section{Definitions}
+\begin{longtable}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Term} & \textbf{Description} \\
+\hline
+Component & A reusable piece of software (code or design) \\
+Catalogue & Database storing components \\
+Keyword & Tag used for searching components \\
+Metadata & Information describing components \\
+\hline
+\end{longtable}
+
+%--------------------------------------------------
+\chapter{Overall Description}
+
+\section{Product Perspective}
+The Software Component Cataloguing System is a standalone application that acts as a repository for reusable components. It can also be integrated into larger development environments.
+
+\section{Product Functions}
+The major functions of the system include:
+\begin{itemize}
+    \item Adding new components
+    \item Deleting existing components
+    \item Updating component information
+    \item Searching components using keywords
+    \item Viewing usage statistics
+\end{itemize}
+
+\section{User Classes}
+\begin{itemize}
+    \item \textbf{Admin (Cataloguer):} Responsible for managing components
+    \item \textbf{User (Developer):} Searches and uses components
+\end{itemize}
+
+\section{Operating Environment}
+\begin{itemize}
+    \item OS: Windows, Linux, MacOS
+    \item Backend: Any server-side technology (Node.js / .NET / Java)
+    \item Database: SQL / NoSQL
+\end{itemize}
+
+%--------------------------------------------------
+\chapter{System Features}
+
+\section{Feature 1: Add Component}
+\textbf{Description:} Admin can add new components into the catalogue.
+
+\textbf{Inputs:}
+\begin{itemize}
+    \item Component Name
+    \item Type (Code/Design)
+    \item Keywords
+\end{itemize}
+
+\textbf{Processing:}
+\begin{itemize}
+    \item Validate inputs
+    \item Store in database
+\end{itemize}
+
+\textbf{Output:}
+\begin{itemize}
+    \item Confirmation message
+\end{itemize}
+
+\section{Feature 2: Search Component}
+Users can search components using keywords.
+
+\begin{itemize}
+    \item Supports multiple keyword search
+    \item Returns ranked results
+\end{itemize}
+
+\section{Feature 3: Usage Tracking}
+System maintains:
+\begin{itemize}
+    \item Number of times component used
+    \item Number of times searched but not used
+\end{itemize}
+
+%--------------------------------------------------
+\chapter{Data Design}
+
+\section{Database Schema}
+
+\begin{longtable}{|p{3cm}|p{3cm}|p{7cm}|}
+\hline
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\hline
+ComponentID & Integer & Unique ID \\
+Name & String & Component name \\
+Type & String & Code/Design \\
+Keywords & String & Search tags \\
+UsageCount & Integer & Usage frequency \\
+SearchMiss & Integer & Unused searches \\
+\hline
+\end{longtable}
+
+%--------------------------------------------------
+\chapter{System Models}
+
+\section{Use Case Diagram}
+
+\begin{figure}[h!]
+\centering
+\fbox{\parbox{12cm}{
+Admin → Add/Delete Component \\
+User → Search Component
+}}
+\caption{Use Case Diagram}
+\end{figure}
+
+\section{Data Flow Diagram}
+
+\begin{figure}[h!]
+\centering
+\fbox{\parbox{12cm}{
+User → Query → System → Database → Result
+}}
+\caption{DFD}
+\end{figure}
+
+\section{Architecture Diagram}
+
+\begin{figure}[h!]
+\centering
+\fbox{\parbox{12cm}{
+Frontend → Backend → Database
+}}
+\caption{System Architecture}
+\end{figure}
+
+%--------------------------------------------------
+\chapter{Non-Functional Requirements}
+
+\section{Performance}
+\begin{itemize}
+    \item Response time < 2 seconds
+    \item Efficient search algorithm
+\end{itemize}
+
+\section{Security}
+\begin{itemize}
+    \item Authentication required
+    \item Role-based access control
+\end{itemize}
+
+\section{Reliability}
+\begin{itemize}
+    \item 99\% uptime
+\end{itemize}
+
+\section{Scalability}
+System should handle thousands of components efficiently.
+
+%--------------------------------------------------
+\chapter{Charts and Analysis}
+
+\section{Component Usage Distribution}
+
+\begin{figure}[h!]
+\centering
+\fbox{\parbox{10cm}{
+Bar Chart showing usage frequency of components
+}}
+\caption{Usage Chart}
+\end{figure}
+
+%--------------------------------------------------
+\chapter{Conclusion}
+
+The Software Component Cataloguing System enhances software development by promoting reuse, reducing redundancy, and improving productivity. It provides an efficient mechanism for storing and retrieving reusable components.
+
+\end{document}
