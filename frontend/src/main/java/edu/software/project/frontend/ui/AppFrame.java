@@ -423,23 +423,36 @@ public class AppFrame extends JFrame {
     }
 
     private JPanel wrapInCard(String title, String subtitle, JComponent body) {
+        return wrapInCard(title, subtitle, null, body);
+    }
+
+    private JPanel wrapInCard(String title, String subtitle, JComponent headerActions, JComponent body) {
         JPanel panel = new CardPanel();
         panel.setLayout(new BorderLayout(0, 10));
-        panel.add(sectionHeader(title, subtitle), BorderLayout.NORTH);
+        panel.add(sectionHeader(title, subtitle, headerActions), BorderLayout.NORTH);
         panel.add(body, BorderLayout.CENTER);
         return panel;
     }
 
     private JComponent sectionHeader(String title, String subtitle) {
-        JPanel panel = transparent(new BorderLayout(0, 4));
+        return sectionHeader(title, subtitle, null);
+    }
+
+    private JComponent sectionHeader(String title, String subtitle, JComponent trailing) {
+        JPanel panel = transparent(new BorderLayout(12, 4));
+        JPanel textBlock = transparent(new BorderLayout(0, 4));
         JLabel titleLabel = new JLabel(title);
         titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 18f));
         titleLabel.setForeground(INK);
         JLabel subtitleLabel = new JLabel(subtitle);
         subtitleLabel.setForeground(MUTED);
         subtitleLabel.setFont(subtitleLabel.getFont().deriveFont(Font.PLAIN, 13f));
-        panel.add(titleLabel, BorderLayout.NORTH);
-        panel.add(subtitleLabel, BorderLayout.CENTER);
+        textBlock.add(titleLabel, BorderLayout.NORTH);
+        textBlock.add(subtitleLabel, BorderLayout.CENTER);
+        panel.add(textBlock, BorderLayout.CENTER);
+        if (trailing != null) {
+            panel.add(trailing, BorderLayout.EAST);
+        }
         return panel;
     }
 
@@ -530,7 +543,11 @@ public class AppFrame extends JFrame {
         private final ComponentTableModel componentTableModel = new ComponentTableModel();
         private final JTable componentTable = new JTable(componentTableModel);
         private final JTextArea catalogueDetailsArea = new JTextArea();
-        private final JTextArea componentDetailsArea = new JTextArea();
+        private final JLabel componentNameValue = detailValueLabel();
+        private final JLabel componentDescriptionValue = detailValueLabel();
+        private final JTextArea componentBodyArea = new JTextArea();
+        private final PlaceholderTextField catalogueSearchField = new PlaceholderTextField("Search catalogues", 20);
+        private final PlaceholderTextField componentSearchField = new PlaceholderTextField("Search components", 20);
 
         private CatalogueWorkspacePanel() {
             setOpaque(false);
@@ -588,7 +605,7 @@ public class AppFrame extends JFrame {
 
             JSplitPane horizontalSplit = new JSplitPane(
                     JSplitPane.HORIZONTAL_SPLIT,
-                    wrapInCard("Catalogues", "Choose a catalogue to manage its components.", new JScrollPane(catalogueTable)),
+                    buildCatalogueCard(),
                     buildDetailsPane()
             );
             horizontalSplit.setOpaque(false);
@@ -604,6 +621,8 @@ public class AppFrame extends JFrame {
                 Session current = requireSession();
                 return apiClient.getCatalogues(current.baseUrl(), current.token());
             }, catalogues -> {
+                catalogueSearchField.setText("");
+                componentSearchField.setText("");
                 catalogueTableModel.setItems(catalogues);
                 componentTableModel.setItems(List.of());
                 showCatalogueDetails(null);
@@ -623,10 +642,10 @@ public class AppFrame extends JFrame {
             catalogueDetailsArea.setWrapStyleWord(true);
             styleTextArea(catalogueDetailsArea, false);
 
-            componentDetailsArea.setEditable(false);
-            componentDetailsArea.setLineWrap(true);
-            componentDetailsArea.setWrapStyleWord(true);
-            styleTextArea(componentDetailsArea, true);
+            componentBodyArea.setEditable(false);
+            componentBodyArea.setLineWrap(true);
+            componentBodyArea.setWrapStyleWord(true);
+            styleTextArea(componentBodyArea, true);
 
             JScrollPane catalogueDetailsScroll = new JScrollPane(catalogueDetailsArea);
             catalogueDetailsScroll.setPreferredSize(new Dimension(420, 170));
@@ -634,14 +653,11 @@ public class AppFrame extends JFrame {
 
             JScrollPane componentTableScroll = new JScrollPane(componentTable);
             componentTableScroll.setBorder(BorderFactory.createEmptyBorder());
-            JScrollPane componentDetailsScroll = new JScrollPane(componentDetailsArea);
-            componentDetailsScroll.setPreferredSize(new Dimension(420, 135));
-            componentDetailsScroll.setBorder(BorderFactory.createEmptyBorder());
 
             JSplitPane componentSplit = new JSplitPane(
                     JSplitPane.VERTICAL_SPLIT,
-                    wrapInCard("Components", "Everything inside the selected catalogue lives here.", componentTableScroll),
-                    wrapInCard("Component Detail", "Content, metadata, and usage signals.", componentDetailsScroll)
+                    buildComponentsCard(componentTableScroll),
+                    wrapInCard("Component Detail", "Content, metadata, and usage signals.", buildComponentDetailPanel())
             );
             componentSplit.setOpaque(false);
             componentSplit.setBorder(BorderFactory.createEmptyBorder());
@@ -667,10 +683,58 @@ public class AppFrame extends JFrame {
                         ? apiClient.getMyCatalogues(current.baseUrl(), current.token())
                         : apiClient.getCatalogues(current.baseUrl(), current.token());
             }, catalogues -> {
+                catalogueSearchField.setText("");
+                componentSearchField.setText("");
                 catalogueTableModel.setItems(catalogues);
                 componentTableModel.setItems(List.of());
                 showCatalogueDetails(null);
                 showComponentDetails(null);
+            });
+        }
+
+        private void searchCatalogues() {
+            String keywords = catalogueSearchField.getText().trim();
+            if (keywords.isEmpty()) {
+                loadInitialCatalogues();
+                return;
+            }
+            runAction("Search catalogues", () -> {
+                Session current = requireSession();
+                return apiClient.searchCatalogues(current.baseUrl(), current.token(), keywords);
+            }, catalogues -> {
+                catalogueTableModel.setItems(catalogues);
+                componentTableModel.setItems(List.of());
+                showCatalogueDetails(null);
+                showComponentDetails(null);
+                if (!catalogues.isEmpty()) {
+                    catalogueTable.setRowSelectionInterval(0, 0);
+                    onCatalogueSelected();
+                }
+            });
+        }
+
+        private void searchComponents() {
+            Catalogue selectedCatalogue = selectedCatalogue();
+            if (selectedCatalogue == null) {
+                JOptionPane.showMessageDialog(this, "Select a catalogue first.");
+                return;
+            }
+            String keywords = componentSearchField.getText().trim();
+            if (keywords.isEmpty()) {
+                componentTableModel.setItems(selectedCatalogue.components());
+                showComponentDetails(null);
+                return;
+            }
+            runAction("Search components", () -> {
+                Session current = requireSession();
+                return apiClient.searchComponents(current.baseUrl(), current.token(), selectedCatalogue.id(), keywords);
+            }, components -> {
+                componentTableModel.setItems(components);
+                showComponentDetails(null);
+                if (!components.isEmpty()) {
+                    componentTable.setRowSelectionInterval(0, 0);
+                    showComponentDetails(componentTableModel.getSelected(0));
+                }
             });
         }
 
@@ -842,9 +906,34 @@ public class AppFrame extends JFrame {
 
         private void onCatalogueSelected() {
             Catalogue selected = selectedCatalogue();
+            componentSearchField.setText("");
             componentTableModel.setItems(selected == null ? List.of() : selected.components());
             showCatalogueDetails(selected);
             showComponentDetails(null);
+        }
+
+        private JPanel buildCatalogueCard() {
+            styleTextInput(catalogueSearchField, 180);
+            JButton searchButton = new JButton("Search");
+            styleActionButton(searchButton, false);
+            searchButton.addActionListener(event -> searchCatalogues());
+
+            JPanel tools = transparent(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+            tools.add(catalogueSearchField);
+            tools.add(searchButton);
+            return wrapInCard("Catalogues", "Choose a catalogue to manage its components.", tools, new JScrollPane(catalogueTable));
+        }
+
+        private JPanel buildComponentsCard(JComponent body) {
+            styleTextInput(componentSearchField, 180);
+            JButton searchButton = new JButton("Search");
+            styleActionButton(searchButton, false);
+            searchButton.addActionListener(event -> searchComponents());
+
+            JPanel tools = transparent(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+            tools.add(componentSearchField);
+            tools.add(searchButton);
+            return wrapInCard("Components", "Everything inside the selected catalogue lives here.", tools, body);
         }
 
         private void showCatalogueDetails(Catalogue catalogue) {
@@ -879,37 +968,48 @@ public class AppFrame extends JFrame {
 
         private void showComponentDetails(Component component) {
             if (component == null) {
-                componentDetailsArea.setText("Select a component inside the current catalogue.");
+                componentNameValue.setText("No component selected");
+                componentDescriptionValue.setText("-");
+                componentBodyArea.setText("Select a component inside the current catalogue.");
                 return;
             }
-            componentDetailsArea.setText("""
-                    Component ID: %d
-                    Name: %s
-                    Type: %s
+            componentNameValue.setText(valueOrEmpty(component.name()));
+            componentDescriptionValue.setText(valueOrEmpty(component.description()));
+            componentBodyArea.setText(valueOrEmpty(component.body()));
+            componentBodyArea.setCaretPosition(0);
+        }
 
-                    Description:
-                    %s
+        private JPanel buildComponentDetailPanel() {
+            JPanel panel = transparent(new GridLayout(1, 2, 14, 0));
 
-                    Keywords:
-                    %s
+            JPanel left = transparent(new BorderLayout(0, 12));
+            left.add(detailItem("Title", componentNameValue), BorderLayout.NORTH);
+            left.add(detailItem("Description", componentDescriptionValue), BorderLayout.CENTER);
 
-                    Body:
-                    %s
+            JScrollPane bodyScroll = new JScrollPane(componentBodyArea);
+            bodyScroll.setBorder(BorderFactory.createLineBorder(LINE, 1, true));
+            bodyScroll.setPreferredSize(new Dimension(420, 180));
 
-                    Usage Count: %d
-                    Search Hit Count: %d
-                    Searched But Not Used: %d
-                    """.formatted(
-                    component.id(),
-                    valueOrEmpty(component.name()),
-                    component.type(),
-                    valueOrEmpty(component.description()),
-                    valueOrEmpty(component.keywords()),
-                    valueOrEmpty(component.body()),
-                    component.usageCount(),
-                    component.searchHitCount(),
-                    component.searchedButNotUsedCount()
-            ));
+            JPanel bodyPanel = transparent(new BorderLayout(0, 8));
+            JLabel bodyTitle = new JLabel("Body");
+            bodyTitle.setForeground(MUTED);
+            bodyTitle.setFont(bodyTitle.getFont().deriveFont(Font.BOLD, 12f));
+            bodyPanel.add(bodyTitle, BorderLayout.NORTH);
+            bodyPanel.add(bodyScroll, BorderLayout.CENTER);
+
+            panel.add(left);
+            panel.add(bodyPanel);
+            return panel;
+        }
+
+        private JPanel detailItem(String label, JLabel valueLabel) {
+            JPanel item = transparent(new BorderLayout(0, 4));
+            JLabel title = new JLabel(label);
+            title.setForeground(MUTED);
+            title.setFont(title.getFont().deriveFont(Font.BOLD, 12f));
+            item.add(title, BorderLayout.NORTH);
+            item.add(valueLabel, BorderLayout.CENTER);
+            return item;
         }
 
         private void replaceCataloguesAndKeepSelection(List<Catalogue> catalogues) {
@@ -1078,6 +1178,13 @@ public class AppFrame extends JFrame {
     @FunctionalInterface
     private interface ResultConsumer<T> {
         void accept(T value);
+    }
+
+    private static JLabel detailValueLabel() {
+        JLabel label = new JLabel("-");
+        label.setForeground(INK);
+        label.setFont(label.getFont().deriveFont(Font.PLAIN, 13f));
+        return label;
     }
 
     private static class PlaceholderTextField extends JTextField {

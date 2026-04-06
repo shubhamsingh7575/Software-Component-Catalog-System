@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class ComponentService {
@@ -34,6 +35,28 @@ public class ComponentService {
     @Transactional(readOnly = true)
     public List<ComponentResponse> getComponents(Long catalogueId) {
         return componentRepository.findByCatalogueIdOrderById(catalogueId).stream()
+                .map(responseMapper::toComponentResponse)
+                .toList();
+    }
+
+    @Transactional
+    public List<ComponentResponse> searchComponents(Long catalogueId, String keywords) {
+        List<String> terms = parseTerms(keywords);
+        if (terms.isEmpty()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "At least one keyword is required");
+        }
+
+        return componentRepository.findByCatalogueIdOrderById(catalogueId).stream()
+                .filter(component -> score(component, terms) > 0)
+                .sorted(java.util.Comparator
+                        .comparingInt((Component component) -> score(component, terms))
+                        .reversed()
+                        .thenComparing(Component::getUsageCount, java.util.Comparator.reverseOrder())
+                        .thenComparing(Component::getId))
+                .peek(component -> {
+                    component.setSearchHitCount(component.getSearchHitCount() + 1);
+                    component.setSearchedButNotUsedCount(component.getSearchedButNotUsedCount() + 1);
+                })
                 .map(responseMapper::toComponentResponse)
                 .toList();
     }
@@ -105,5 +128,32 @@ public class ComponentService {
         if (currentUser.role() != Role.ADMIN) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Admin role required");
         }
+    }
+
+    private List<String> parseTerms(String keywords) {
+        if (keywords == null || keywords.isBlank()) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(keywords.split("[,\\s]+"))
+                .map(String::trim)
+                .filter(token -> !token.isEmpty())
+                .map(token -> token.toLowerCase(Locale.ROOT))
+                .toList();
+    }
+
+    private int score(Component component, List<String> terms) {
+        return terms.stream().mapToInt(term -> scoreTerm(component, term)).sum();
+    }
+
+    private int scoreTerm(Component component, String term) {
+        return scoreText(component.getName(), term, 7)
+                + scoreText(component.getKeywords(), term, 5)
+                + scoreText(component.getDescription(), term, 3)
+                + scoreText(component.getBody(), term, 2)
+                + scoreText(component.getType() == null ? null : component.getType().name(), term, 1);
+    }
+
+    private int scoreText(String value, String term, int weight) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(term) ? weight : 0;
     }
 }

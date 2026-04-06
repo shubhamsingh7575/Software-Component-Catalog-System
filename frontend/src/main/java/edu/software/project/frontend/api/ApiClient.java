@@ -13,9 +13,11 @@ import edu.software.project.frontend.model.UserProfile;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -59,6 +61,11 @@ public class ApiClient {
         return toCatalogueList(send(baseUrl, "GET", "/api/catalogues/mine", token, null));
     }
 
+    public List<Catalogue> searchCatalogues(String baseUrl, String token, String keywords) {
+        String encoded = URLEncoder.encode(keywords, StandardCharsets.UTF_8);
+        return toCatalogueList(send(baseUrl, "GET", "/api/catalogues/search?keywords=" + encoded, token, null));
+    }
+
     public Catalogue createCatalogue(String baseUrl, String token, CatalogueRequest request) {
         return toCatalogue(asMap(send(baseUrl, "POST", "/api/catalogues", token, mapOf(
                 "name", request.name(),
@@ -81,6 +88,12 @@ public class ApiClient {
 
     public List<Component> getComponents(String baseUrl, String token, long catalogueId) {
         return toComponentList(send(baseUrl, "GET", "/api/catalogues/" + catalogueId + "/components", token, null));
+    }
+
+    public List<Component> searchComponents(String baseUrl, String token, long catalogueId, String keywords) {
+        String encoded = URLEncoder.encode(keywords, StandardCharsets.UTF_8);
+        return toComponentList(send(baseUrl, "GET",
+                "/api/catalogues/" + catalogueId + "/components/search?keywords=" + encoded, token, null));
     }
 
     public Component createComponent(String baseUrl, String token, long catalogueId, ComponentRequest request) {
