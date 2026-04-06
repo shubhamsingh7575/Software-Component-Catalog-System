@@ -1,37 +1,71 @@
 package edu.software.project.backend.controller;
 
-import edu.software.project.backend.entity.Catalogue;
-import edu.software.project.backend.entity.Component;
-import edu.software.project.backend.repository.CatalogueRepository;
-import edu.software.project.backend.repository.ComponentRepository;
+import edu.software.project.backend.dto.ComponentRequest;
+import edu.software.project.backend.dto.ComponentResponse;
+import edu.software.project.backend.security.AuthenticatedUser;
+import edu.software.project.backend.security.CurrentUser;
+import edu.software.project.backend.service.ComponentService;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/api/component")
+@RequestMapping("/api/components")
 public class ComponentController {
+    private final ComponentService componentService;
 
-    private final ComponentRepository componentRepository;
-    private final CatalogueRepository catalogueRepository;
-
-    public ComponentController(ComponentRepository componentRepository, CatalogueRepository catalogueRepository) {
-        this.componentRepository = componentRepository;
-        this.catalogueRepository = catalogueRepository;
+    public ComponentController(ComponentService componentService) {
+        this.componentService = componentService;
     }
 
-    @PostMapping("/create")
-    /**
-     * POST /api/component/create?catalogueId=1&name=ComponentName&body=content
-     */
-    public Component createComponent(@RequestParam Long catalogueId, @RequestParam String name, @RequestParam String body) {
-        Catalogue catalogue = catalogueRepository.findById(catalogueId).orElseThrow();
-        Component component = new Component();
-        component.setName(name);
-        component.setBody(body);
-        component.setCatalogue(catalogue);
+    @PostMapping
+    public ComponentResponse createComponent(
+            @Valid @RequestBody ComponentRequest request,
+            @CurrentUser AuthenticatedUser authenticatedUser
+    ) {
+        return componentService.createComponent(request, authenticatedUser.user());
+    }
 
-        return componentRepository.save(component);
+    @PutMapping("/{id}")
+    public ComponentResponse updateComponent(
+            @PathVariable Long id,
+            @Valid @RequestBody ComponentRequest request,
+            @CurrentUser AuthenticatedUser authenticatedUser
+    ) {
+        return componentService.updateComponent(id, request, authenticatedUser.user());
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteComponent(@PathVariable Long id, @CurrentUser AuthenticatedUser authenticatedUser) {
+        componentService.deleteComponent(id, authenticatedUser.user());
+    }
+
+    @GetMapping
+    public List<ComponentResponse> getAllComponents() {
+        return componentService.getAllComponents();
+    }
+
+    @GetMapping("/{id}")
+    public ComponentResponse getComponent(@PathVariable Long id) {
+        return componentService.getComponent(id);
+    }
+
+    @GetMapping("/search")
+    public List<ComponentResponse> searchComponents(@RequestParam String keywords) {
+        return componentService.searchComponents(keywords);
+    }
+
+    @PostMapping("/{id}/use")
+    public ComponentResponse recordUsage(@PathVariable Long id) {
+        return componentService.recordUsage(id);
     }
 }

@@ -1,12 +1,139 @@
-POST http://localhost:8080/users
+@baseUrl = http://localhost:8080
+@authToken = paste-token-here
+@catalogueId = 1
+@componentId = 1
+
+### Health Check
+GET {{baseUrl}}/hello?myName=Frontend
+
+### Register Admin/User
+POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 
 {
-  "userName": "Gyan",
-  "email": "gyanprakash2483@gmail.com",
-  "password": "1234"
+  "username": "Admin User",
+  "email": "admin@example.com",
+  "password": "StrongPass1!",
+  "confirmPassword": "StrongPass1!"
 }
 
 ###
 
-GET http://localhost:8080/users
+### Login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "StrongPass1!"
+}
+
+###
+
+### Current User
+GET {{baseUrl}}/api/users/me
+X-Auth-Token: {{authToken}}
+
+###
+
+### Create Catalogue
+POST {{baseUrl}}/api/catalogues
+Content-Type: application/json
+X-Auth-Token: {{authToken}}
+
+{
+  "name": "Design Assets",
+  "description": "Reusable design artifacts",
+  "keywords": "uml, erd, architecture"
+}
+
+###
+
+### List All Catalogues
+GET {{baseUrl}}/api/catalogues
+X-Auth-Token: {{authToken}}
+
+###
+
+### List My Catalogues
+GET {{baseUrl}}/api/catalogues/mine
+X-Auth-Token: {{authToken}}
+
+###
+
+### Update Catalogue
+PUT {{baseUrl}}/api/catalogues/{{catalogueId}}
+Content-Type: application/json
+X-Auth-Token: {{authToken}}
+
+{
+  "name": "Updated Design Assets",
+  "description": "Updated reusable design artifacts",
+  "keywords": "uml, erd, architecture, updated"
+}
+
+###
+
+### Delete Catalogue
+DELETE {{baseUrl}}/api/catalogues/{{catalogueId}}
+X-Auth-Token: {{authToken}}
+
+###
+
+### Create Component
+POST {{baseUrl}}/api/components
+Content-Type: application/json
+X-Auth-Token: {{authToken}}
+
+{
+  "name": "Order UML",
+  "description": "Class diagram for the order flow",
+  "keywords": "uml,order,design",
+  "type": "UML",
+  "catalogueIds": [{{catalogueId}}]
+}
+
+###
+
+### List All Components
+GET {{baseUrl}}/api/components
+X-Auth-Token: {{authToken}}
+
+###
+
+### Get Component By Id
+GET {{baseUrl}}/api/components/{{componentId}}
+X-Auth-Token: {{authToken}}
+
+###
+
+### Search Components By Keywords
+GET {{baseUrl}}/api/components/search?keywords=uml%20order
+X-Auth-Token: {{authToken}}
+
+###
+
+### Record Component Usage
+POST {{baseUrl}}/api/components/{{componentId}}/use
+X-Auth-Token: {{authToken}}
+
+###
+
+### Update Component
+PUT {{baseUrl}}/api/components/{{componentId}}
+Content-Type: application/json
+X-Auth-Token: {{authToken}}
+
+{
+  "name": "Order UML Updated",
+  "description": "Updated class diagram for the order flow",
+  "keywords": "uml,order,design,updated",
+  "type": "UML",
+  "catalogueIds": [{{catalogueId}}]
+}
+
+###
+
+### Delete Component
+DELETE {{baseUrl}}/api/components/{{componentId}}
+X-Auth-Token: {{authToken}}

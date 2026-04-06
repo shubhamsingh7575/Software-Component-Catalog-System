@@ -1,28 +1,44 @@
 package edu.software.project.backend.entity;
-import jakarta.persistence.*;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
-@Table(name = "users") // avoid reserved word "user"
+@Table(name = "users")
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long userId;
-    private String userName;
+    @Column(name = "user_id")
+    private Long id;
+
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
-    private String password;
 
-    public User() {}
+    @Column(name = "user_name", nullable = false)
+    private String username;
 
-    public Long getUserId() {
-        return userId;
-    }
+    @Column(name = "password", nullable = false)
+    private String passwordHash;
 
-    public String getUserName() {
-        return userName;
-    }
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false)
+    private Role role = Role.USER;
 
-    public void setUserName(String userName) {
-        this.userName = userName;
+    @OneToMany(mappedBy = "owner")
+    private List<Catalogue> catalogues = new ArrayList<>();
+
+    public Long getId() {
+        return id;
     }
 
     public String getEmail() {
@@ -33,11 +49,35 @@ public class User {
         this.email = email;
     }
 
-    public String getPassword() {
-        return password;
+    public String getUsername() {
+        return username;
     }
 
-    public void setPassword(String password) {
-        this.password = password;
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
+    public List<Catalogue> getCatalogues() {
+        return catalogues;
+    }
+
+    public void setCatalogues(List<Catalogue> catalogues) {
+        this.catalogues = catalogues;
     }
 }
