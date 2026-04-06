@@ -1,6 +1,6 @@
 package edu.software.project.backend.security;
 
-import edu.software.project.backend.entity.User;
+import edu.software.project.backend.entity.Role;
 
-public record AuthenticatedUser(User user) {
+public record AuthenticatedUser(Long id, String username, String email, Role role) {
 }

@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Run Full Stack" type="CompoundRunConfigurationType" factoryName="Compound">
+    <toRun name="Run Backend" type="Application" />
+    <toRun name="Run Frontend" type="Application" />
+    <method v="2" />
+  </configuration>
+</component>

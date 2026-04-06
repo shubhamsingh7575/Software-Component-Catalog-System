@@ -7,13 +7,15 @@ import edu.software.project.backend.repository.AuthSessionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HexFormat;
-import java.util.UUID;
 
 @Service
 public class SessionService {
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     private final AuthSessionRepository authSessionRepository;
     private final AppProperties appProperties;
 
@@ -33,7 +35,14 @@ public class SessionService {
         return authSessionRepository.save(session).getToken();
     }
 
+    @Transactional
+    public void invalidateSession(String token) {
+        authSessionRepository.deleteByToken(token);
+    }
+
     private String generateToken() {
-        return HexFormat.of().formatHex(UUID.randomUUID().toString().replace("-", "").getBytes());
+        byte[] tokenBytes = new byte[32];
+        SECURE_RANDOM.nextBytes(tokenBytes);
+        return HexFormat.of().formatHex(tokenBytes);
     }
 }

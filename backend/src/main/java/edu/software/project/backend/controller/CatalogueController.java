@@ -31,7 +31,7 @@ public class CatalogueController {
             @Valid @RequestBody CatalogueRequest request,
             @CurrentUser AuthenticatedUser authenticatedUser
     ) {
-        return catalogueService.createCatalogue(request, authenticatedUser.user());
+        return catalogueService.createCatalogue(request, authenticatedUser);
     }
 
     @GetMapping
@@ -41,7 +41,7 @@ public class CatalogueController {
 
     @GetMapping("/mine")
     public List<CatalogueResponse> getMyCatalogues(@CurrentUser AuthenticatedUser authenticatedUser) {
-        return catalogueService.getCurrentUserCatalogues(authenticatedUser.user());
+        return catalogueService.getCurrentUserCatalogues(authenticatedUser);
     }
 
     @PutMapping("/{id}")
@@ -50,11 +50,11 @@ public class CatalogueController {
             @Valid @RequestBody CatalogueRequest request,
             @CurrentUser AuthenticatedUser authenticatedUser
     ) {
-        return catalogueService.updateCatalogue(id, request, authenticatedUser.user());
+        return catalogueService.updateCatalogue(id, request, authenticatedUser);
     }
 
     @DeleteMapping("/{id}")
     public void deleteCatalogue(@PathVariable Long id, @CurrentUser AuthenticatedUser authenticatedUser) {
-        catalogueService.deleteCatalogue(id, authenticatedUser.user());
+        catalogueService.deleteCatalogue(id, authenticatedUser);
     }
 }

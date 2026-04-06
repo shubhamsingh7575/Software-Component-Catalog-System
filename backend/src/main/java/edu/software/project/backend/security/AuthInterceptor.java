@@ -29,11 +29,15 @@ public class AuthInterceptor implements HandlerInterceptor {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Missing X-Auth-Token header");
         }
 
-        AuthSession session = authSessionRepository.findByToken(token)
-                .filter(it -> it.getExpiresAt().isAfter(Instant.now()))
+        AuthSession session = authSessionRepository.findByTokenAndExpiresAtAfter(token, Instant.now())
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Invalid or expired session"));
 
-        request.setAttribute(AUTHENTICATED_USER_ATTR, new AuthenticatedUser(session.getUser()));
+        request.setAttribute(AUTHENTICATED_USER_ATTR, new AuthenticatedUser(
+                session.getUser().getId(),
+                session.getUser().getUsername(),
+                session.getUser().getEmail(),
+                session.getUser().getRole()
+        ));
         return true;
     }
 }

@@ -92,7 +92,17 @@ public class AppFrame extends JFrame {
         panel.add(left, BorderLayout.WEST);
 
         JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        logoutButton.addActionListener(event -> updateSession(null));
+        logoutButton.addActionListener(event -> {
+            if (session == null) {
+                updateSession(null);
+                return;
+            }
+            runAction("Logout", () -> {
+                Session current = session;
+                apiClient.logout(current.baseUrl(), current.token());
+                return null;
+            }, ignored -> updateSession(null));
+        });
         right.add(sessionLabel);
         right.add(logoutButton);
         panel.add(right, BorderLayout.EAST);
@@ -218,7 +228,11 @@ public class AppFrame extends JFrame {
         for (String token : rawIds.split(",")) {
             String trimmed = token.trim();
             if (!trimmed.isEmpty()) {
-                ids.add(Long.parseLong(trimmed));
+                try {
+                    ids.add(Long.parseLong(trimmed));
+                } catch (NumberFormatException exception) {
+                    throw new ApiException("Catalogue IDs must be comma-separated numbers.");
+                }
             }
         }
         return ids;

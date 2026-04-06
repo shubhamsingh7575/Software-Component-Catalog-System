@@ -46,6 +46,10 @@ public class ApiClient {
         )));
     }
 
+    public void logout(String baseUrl, String token) {
+        send(baseUrl, "POST", "/api/auth/logout", token, null);
+    }
+
     public UserProfile getCurrentUser(String baseUrl, String token) {
         return toUserProfile(asMap(send(baseUrl, "GET", "/api/users/me", token, null)));
     }

@@ -5,10 +5,10 @@ import edu.software.project.backend.dto.ComponentResponse;
 import edu.software.project.backend.entity.Catalogue;
 import edu.software.project.backend.entity.Component;
 import edu.software.project.backend.entity.Role;
-import edu.software.project.backend.entity.User;
 import edu.software.project.backend.exception.ApiException;
 import edu.software.project.backend.repository.CatalogueRepository;
 import edu.software.project.backend.repository.ComponentRepository;
+import edu.software.project.backend.security.AuthenticatedUser;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +37,7 @@ public class ComponentService {
     }
 
     @Transactional
-    public ComponentResponse createComponent(ComponentRequest request, User currentUser) {
+    public ComponentResponse createComponent(ComponentRequest request, AuthenticatedUser currentUser) {
         requireAdmin(currentUser);
         Component component = new Component();
         applyComponentRequest(component, request);
@@ -45,7 +45,7 @@ public class ComponentService {
     }
 
     @Transactional
-    public ComponentResponse updateComponent(Long id, ComponentRequest request, User currentUser) {
+    public ComponentResponse updateComponent(Long id, ComponentRequest request, AuthenticatedUser currentUser) {
         requireAdmin(currentUser);
         Component component = componentRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Component not found"));
@@ -54,7 +54,7 @@ public class ComponentService {
     }
 
     @Transactional
-    public void deleteComponent(Long id, User currentUser) {
+    public void deleteComponent(Long id, AuthenticatedUser currentUser) {
         requireAdmin(currentUser);
         Component component = componentRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Component not found"));
@@ -84,7 +84,10 @@ public class ComponentService {
         }
 
         List<Component> ranked = rankComponents(terms);
-        ranked.forEach(component -> component.setSearchHitCount(component.getSearchHitCount() + 1));
+        ranked.forEach(component -> {
+            component.setSearchHitCount(component.getSearchHitCount() + 1);
+            component.setSearchedButNotUsedCount(component.getSearchedButNotUsedCount() + 1);
+        });
 
         return ranked.stream()
                 .map(responseMapper::toComponentResponse)
@@ -96,6 +99,9 @@ public class ComponentService {
         Component component = componentRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Component not found"));
         component.setUsageCount(component.getUsageCount() + 1);
+        if (component.getSearchedButNotUsedCount() > 0) {
+            component.setSearchedButNotUsedCount(component.getSearchedButNotUsedCount() - 1);
+        }
         return responseMapper.toComponentResponse(component);
     }
 
@@ -171,8 +177,8 @@ public class ComponentService {
         return value != null && value.toLowerCase(Locale.ROOT).contains(term);
     }
 
-    private void requireAdmin(User currentUser) {
-        if (currentUser.getRole() != Role.ADMIN) {
+    private void requireAdmin(AuthenticatedUser currentUser) {
+        if (currentUser.role() != Role.ADMIN) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Admin role required");
         }
     }

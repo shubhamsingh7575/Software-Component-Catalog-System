@@ -11,6 +11,7 @@ Protected endpoints require the header:
 `X-Auth-Token: <token>`
 
 The token is returned by both register and login APIs.
+Use the logout API to invalidate it explicitly.
 
 The first user who registers is assigned the role `ADMIN`. Later users are assigned `USER`.
 
@@ -105,6 +106,18 @@ Success response:
   "token": "..."
 }
 ```
+
+### `POST /api/auth/logout`
+
+Invalidates the current auth token.
+
+Headers:
+
+- `X-Auth-Token: <token>`
+
+Success response:
+
+- `200 OK` with an empty body
 
 ## User API
 

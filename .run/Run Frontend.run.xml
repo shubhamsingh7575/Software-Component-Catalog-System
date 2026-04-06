@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Run Frontend" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="edu.software.project.frontend.Main" />
+    <module name="frontend" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/frontend" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

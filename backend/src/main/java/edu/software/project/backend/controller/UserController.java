@@ -19,6 +19,6 @@ public class UserController {
 
     @GetMapping("/me")
     public UserProfileResponse getCurrentUser(@CurrentUser AuthenticatedUser authenticatedUser) {
-        return responseMapper.toUserProfile(authenticatedUser.user());
+        return responseMapper.toUserProfile(authenticatedUser);
     }
 }

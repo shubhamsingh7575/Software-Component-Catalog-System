@@ -32,7 +32,7 @@ public class ComponentController {
             @Valid @RequestBody ComponentRequest request,
             @CurrentUser AuthenticatedUser authenticatedUser
     ) {
-        return componentService.createComponent(request, authenticatedUser.user());
+        return componentService.createComponent(request, authenticatedUser);
     }
 
     @PutMapping("/{id}")
@@ -41,12 +41,12 @@ public class ComponentController {
             @Valid @RequestBody ComponentRequest request,
             @CurrentUser AuthenticatedUser authenticatedUser
     ) {
-        return componentService.updateComponent(id, request, authenticatedUser.user());
+        return componentService.updateComponent(id, request, authenticatedUser);
     }
 
     @DeleteMapping("/{id}")
     public void deleteComponent(@PathVariable Long id, @CurrentUser AuthenticatedUser authenticatedUser) {
-        componentService.deleteComponent(id, authenticatedUser.user());
+        componentService.deleteComponent(id, authenticatedUser);
     }
 
     @GetMapping

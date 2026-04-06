@@ -6,6 +6,7 @@ import edu.software.project.backend.dto.ComponentSummary;
 import edu.software.project.backend.dto.UserProfileResponse;
 import edu.software.project.backend.entity.Catalogue;
 import edu.software.project.backend.entity.User;
+import edu.software.project.backend.security.AuthenticatedUser;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
@@ -15,6 +16,10 @@ import java.util.List;
 public class ResponseMapper {
     public UserProfileResponse toUserProfile(User user) {
         return new UserProfileResponse(user.getId(), user.getUsername(), user.getEmail(), user.getRole());
+    }
+
+    public UserProfileResponse toUserProfile(AuthenticatedUser user) {
+        return new UserProfileResponse(user.id(), user.username(), user.email(), user.role());
     }
 
     public CatalogueResponse toCatalogueResponse(Catalogue catalogue) {
@@ -38,7 +43,6 @@ public class ResponseMapper {
                 .map(Catalogue::getId)
                 .sorted()
                 .toList();
-        long searchedButNotUsedCount = Math.max(component.getSearchHitCount() - component.getUsageCount(), 0);
         return new ComponentResponse(
                 component.getId(),
                 component.getName(),
@@ -47,7 +51,7 @@ public class ResponseMapper {
                 component.getType(),
                 component.getUsageCount(),
                 component.getSearchHitCount(),
-                searchedButNotUsedCount,
+                component.getSearchedButNotUsedCount(),
                 catalogueIds
         );
     }

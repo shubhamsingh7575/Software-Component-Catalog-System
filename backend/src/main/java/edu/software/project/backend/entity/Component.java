@@ -39,6 +39,9 @@ public class Component {
     @Column(nullable = false)
     private long searchHitCount = 0;
 
+    @Column(nullable = false)
+    private long searchedButNotUsedCount = 0;
+
     @ManyToMany(mappedBy = "components")
     private Set<Catalogue> catalogues = new LinkedHashSet<>();
 
@@ -92,6 +95,14 @@ public class Component {
 
     public void setSearchHitCount(long searchHitCount) {
         this.searchHitCount = searchHitCount;
+    }
+
+    public long getSearchedButNotUsedCount() {
+        return searchedButNotUsedCount;
+    }
+
+    public void setSearchedButNotUsedCount(long searchedButNotUsedCount) {
+        this.searchedButNotUsedCount = searchedButNotUsedCount;
     }
 
     public Set<Catalogue> getCatalogues() {
