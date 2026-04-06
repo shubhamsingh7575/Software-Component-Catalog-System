@@ -9,10 +9,11 @@ public record ComponentResponse(
         String name,
         String description,
         String keywords,
+        String body,
         ComponentType type,
         long usageCount,
         long searchHitCount,
         long searchedButNotUsedCount,
-        List<Long> catalogueIds
+        Long catalogueId
 ) {
 }

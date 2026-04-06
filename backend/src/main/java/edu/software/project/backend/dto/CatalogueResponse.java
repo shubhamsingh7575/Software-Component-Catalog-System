@@ -1,7 +1,5 @@
 package edu.software.project.backend.dto;
 
-import java.util.List;
-
 public record CatalogueResponse(
         Long id,
         String name,
@@ -9,6 +7,6 @@ public record CatalogueResponse(
         String keywords,
         Long ownerId,
         String ownerUsername,
-        List<ComponentSummary> components
+        java.util.List<ComponentResponse> components
 ) {
 }

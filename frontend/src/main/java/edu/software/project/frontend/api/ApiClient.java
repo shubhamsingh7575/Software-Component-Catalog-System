@@ -4,7 +4,6 @@ import edu.software.project.frontend.model.AuthResponse;
 import edu.software.project.frontend.model.Catalogue;
 import edu.software.project.frontend.model.CatalogueRequest;
 import edu.software.project.frontend.model.Component;
-import edu.software.project.frontend.model.ComponentListItem;
 import edu.software.project.frontend.model.ComponentRequest;
 import edu.software.project.frontend.model.ComponentType;
 import edu.software.project.frontend.model.LoginRequest;
@@ -14,11 +13,9 @@ import edu.software.project.frontend.model.UserProfile;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -82,33 +79,27 @@ public class ApiClient {
         send(baseUrl, "DELETE", "/api/catalogues/" + id, token, null);
     }
 
-    public List<Component> getComponents(String baseUrl, String token) {
-        return toComponentList(send(baseUrl, "GET", "/api/components", token, null));
+    public List<Component> getComponents(String baseUrl, String token, long catalogueId) {
+        return toComponentList(send(baseUrl, "GET", "/api/catalogues/" + catalogueId + "/components", token, null));
     }
 
-    public Component getComponent(String baseUrl, String token, long id) {
-        return toComponent(asMap(send(baseUrl, "GET", "/api/components/" + id, token, null)));
+    public Component createComponent(String baseUrl, String token, long catalogueId, ComponentRequest request) {
+        return toComponent(asMap(send(baseUrl, "POST",
+                "/api/catalogues/" + catalogueId + "/components", token, componentRequestBody(request))));
     }
 
-    public List<Component> searchComponents(String baseUrl, String token, String keywords) {
-        String encoded = URLEncoder.encode(keywords, StandardCharsets.UTF_8);
-        return toComponentList(send(baseUrl, "GET", "/api/components/search?keywords=" + encoded, token, null));
+    public Component updateComponent(String baseUrl, String token, long catalogueId, long componentId, ComponentRequest request) {
+        return toComponent(asMap(send(baseUrl, "PUT",
+                "/api/catalogues/" + catalogueId + "/components/" + componentId, token, componentRequestBody(request))));
     }
 
-    public Component useComponent(String baseUrl, String token, long id) {
-        return toComponent(asMap(send(baseUrl, "POST", "/api/components/" + id + "/use", token, null)));
+    public void deleteComponent(String baseUrl, String token, long catalogueId, long componentId) {
+        send(baseUrl, "DELETE", "/api/catalogues/" + catalogueId + "/components/" + componentId, token, null);
     }
 
-    public Component createComponent(String baseUrl, String token, ComponentRequest request) {
-        return toComponent(asMap(send(baseUrl, "POST", "/api/components", token, componentRequestBody(request))));
-    }
-
-    public Component updateComponent(String baseUrl, String token, long id, ComponentRequest request) {
-        return toComponent(asMap(send(baseUrl, "PUT", "/api/components/" + id, token, componentRequestBody(request))));
-    }
-
-    public void deleteComponent(String baseUrl, String token, long id) {
-        send(baseUrl, "DELETE", "/api/components/" + id, token, null);
+    public Component useComponent(String baseUrl, String token, long catalogueId, long componentId) {
+        return toComponent(asMap(send(baseUrl, "POST",
+                "/api/catalogues/" + catalogueId + "/components/" + componentId + "/use", token, null)));
     }
 
     private Object send(String baseUrl, String method, String path, String token, Map<String, Object> body) {
@@ -179,8 +170,8 @@ public class ApiClient {
                 "name", request.name(),
                 "description", request.description(),
                 "keywords", request.keywords(),
-                "type", request.type() == null ? null : request.type().name(),
-                "catalogueIds", request.catalogueIds()
+                "body", request.body(),
+                "type", request.type() == null ? null : request.type().name()
         );
     }
 
@@ -214,16 +205,11 @@ public class ApiClient {
     }
 
     private Catalogue toCatalogue(Map<String, Object> map) {
-        List<ComponentListItem> items = new ArrayList<>();
+        List<Component> items = new ArrayList<>();
         Object components = map.get("components");
         if (components instanceof List<?> rawList) {
             for (Object item : rawList) {
-                Map<String, Object> componentMap = asMap(item);
-                items.add(new ComponentListItem(
-                        asLong(componentMap.get("id")),
-                        asString(componentMap.get("name")),
-                        ComponentType.valueOf(asString(componentMap.get("type")))
-                ));
+                items.add(toComponent(asMap(item)));
             }
         }
         return new Catalogue(
@@ -247,23 +233,17 @@ public class ApiClient {
     }
 
     private Component toComponent(Map<String, Object> map) {
-        List<Long> catalogueIds = new ArrayList<>();
-        Object ids = map.get("catalogueIds");
-        if (ids instanceof List<?> rawIds) {
-            for (Object id : rawIds) {
-                catalogueIds.add(asLong(id));
-            }
-        }
         return new Component(
                 asLong(map.get("id")),
                 asString(map.get("name")),
                 asString(map.get("description")),
                 asString(map.get("keywords")),
+                asString(map.get("body")),
                 ComponentType.valueOf(asString(map.get("type"))),
                 asLong(map.get("usageCount")),
                 asLong(map.get("searchHitCount")),
                 asLong(map.get("searchedButNotUsedCount")),
-                catalogueIds
+                asLong(map.get("catalogueId"))
         );
     }
 

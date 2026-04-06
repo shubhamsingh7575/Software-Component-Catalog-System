@@ -13,12 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 
 @Service
 public class ComponentService {
@@ -36,68 +31,51 @@ public class ComponentService {
         this.responseMapper = responseMapper;
     }
 
+    @Transactional(readOnly = true)
+    public List<ComponentResponse> getComponents(Long catalogueId) {
+        return componentRepository.findByCatalogueIdOrderById(catalogueId).stream()
+                .map(responseMapper::toComponentResponse)
+                .toList();
+    }
+
     @Transactional
-    public ComponentResponse createComponent(ComponentRequest request, AuthenticatedUser currentUser) {
+    public ComponentResponse createComponent(Long catalogueId, ComponentRequest request, AuthenticatedUser currentUser) {
         requireAdmin(currentUser);
+        Catalogue catalogue = requireOwnedCatalogue(catalogueId, currentUser);
+
         Component component = new Component();
-        applyComponentRequest(component, request);
+        applyComponentRequest(component, request, catalogue);
         return responseMapper.toComponentResponse(componentRepository.save(component));
     }
 
     @Transactional
-    public ComponentResponse updateComponent(Long id, ComponentRequest request, AuthenticatedUser currentUser) {
+    public ComponentResponse updateComponent(
+            Long catalogueId,
+            Long componentId,
+            ComponentRequest request,
+            AuthenticatedUser currentUser
+    ) {
         requireAdmin(currentUser);
-        Component component = componentRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Component not found"));
-        applyComponentRequest(component, request);
+        Catalogue catalogue = requireOwnedCatalogue(catalogueId, currentUser);
+        Component component = componentRepository.findByIdAndCatalogueId(componentId, catalogueId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Component not found in this catalogue"));
+        applyComponentRequest(component, request, catalogue);
         return responseMapper.toComponentResponse(component);
     }
 
     @Transactional
-    public void deleteComponent(Long id, AuthenticatedUser currentUser) {
+    public void deleteComponent(Long catalogueId, Long componentId, AuthenticatedUser currentUser) {
         requireAdmin(currentUser);
-        Component component = componentRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Component not found"));
+        requireOwnedCatalogue(catalogueId, currentUser);
+        Component component = componentRepository.findByIdAndCatalogueId(componentId, catalogueId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Component not found in this catalogue"));
         componentRepository.delete(component);
     }
 
-    @Transactional(readOnly = true)
-    public List<ComponentResponse> getAllComponents() {
-        return componentRepository.findAll().stream()
-                .sorted(Comparator.comparing(Component::getId))
-                .map(responseMapper::toComponentResponse)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public ComponentResponse getComponent(Long id) {
-        Component component = componentRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Component not found"));
-        return responseMapper.toComponentResponse(component);
-    }
-
     @Transactional
-    public List<ComponentResponse> searchComponents(String keywords) {
-        List<String> terms = parseTerms(keywords);
-        if (terms.isEmpty()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "At least one keyword is required");
-        }
-
-        List<Component> ranked = rankComponents(terms);
-        ranked.forEach(component -> {
-            component.setSearchHitCount(component.getSearchHitCount() + 1);
-            component.setSearchedButNotUsedCount(component.getSearchedButNotUsedCount() + 1);
-        });
-
-        return ranked.stream()
-                .map(responseMapper::toComponentResponse)
-                .toList();
-    }
-
-    @Transactional
-    public ComponentResponse recordUsage(Long id) {
-        Component component = componentRepository.findById(id)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Component not found"));
+    public ComponentResponse recordUsage(Long catalogueId, Long componentId) {
+        Component component = componentRepository.findByIdAndCatalogueId(componentId, catalogueId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Component not found in this catalogue"));
         component.setUsageCount(component.getUsageCount() + 1);
         if (component.getSearchedButNotUsedCount() > 0) {
             component.setSearchedButNotUsedCount(component.getSearchedButNotUsedCount() - 1);
@@ -105,76 +83,22 @@ public class ComponentService {
         return responseMapper.toComponentResponse(component);
     }
 
-    private void applyComponentRequest(Component component, ComponentRequest request) {
+    private void applyComponentRequest(Component component, ComponentRequest request, Catalogue catalogue) {
         component.setName(request.name().trim());
         component.setDescription(request.description());
         component.setKeywords(request.keywords());
+        component.setBody(request.body());
         component.setType(request.type());
-        component.setCatalogues(resolveCatalogues(request.catalogueIds()));
+        component.setCatalogue(catalogue);
     }
 
-    private Set<Catalogue> resolveCatalogues(Set<Long> catalogueIds) {
-        if (catalogueIds == null || catalogueIds.isEmpty()) {
-            return new LinkedHashSet<>();
+    private Catalogue requireOwnedCatalogue(Long catalogueId, AuthenticatedUser currentUser) {
+        Catalogue catalogue = catalogueRepository.findById(catalogueId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Catalogue not found"));
+        if (!catalogue.getOwner().getId().equals(currentUser.id())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Catalogue access denied");
         }
-
-        List<Catalogue> catalogues = catalogueRepository.findAllById(catalogueIds);
-        if (catalogues.size() != catalogueIds.size()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "One or more catalogue ids are invalid");
-        }
-        return new LinkedHashSet<>(catalogues);
-    }
-
-    private List<String> parseTerms(String keywords) {
-        if (keywords == null || keywords.isBlank()) {
-            return List.of();
-        }
-
-        String[] rawTerms = keywords.split("[,\\s]+");
-        List<String> terms = new ArrayList<>();
-        for (String rawTerm : rawTerms) {
-            if (!rawTerm.isBlank()) {
-                terms.add(rawTerm.toLowerCase(Locale.ROOT));
-            }
-        }
-        return terms;
-    }
-
-    private List<Component> rankComponents(List<String> terms) {
-        return componentRepository.findAll().stream()
-                .filter(component -> matches(component, terms))
-                .sorted(Comparator
-                        .comparingInt((Component component) -> score(component, terms))
-                        .reversed()
-                        .thenComparing(Component::getUsageCount, Comparator.reverseOrder())
-                        .thenComparing(Component::getId))
-                .toList();
-    }
-
-    private boolean matches(Component component, List<String> terms) {
-        return terms.stream().anyMatch(term -> scoreTerm(component, term) > 0);
-    }
-
-    private int score(Component component, List<String> terms) {
-        return terms.stream().mapToInt(term -> scoreTerm(component, term)).sum();
-    }
-
-    private int scoreTerm(Component component, String term) {
-        int score = 0;
-        if (containsIgnoreCase(component.getName(), term)) {
-            score += 5;
-        }
-        if (containsIgnoreCase(component.getKeywords(), term)) {
-            score += 3;
-        }
-        if (containsIgnoreCase(component.getDescription(), term)) {
-            score += 1;
-        }
-        return score;
-    }
-
-    private boolean containsIgnoreCase(String value, String term) {
-        return value != null && value.toLowerCase(Locale.ROOT).contains(term);
+        return catalogue;
     }
 
     private void requireAdmin(AuthenticatedUser currentUser) {

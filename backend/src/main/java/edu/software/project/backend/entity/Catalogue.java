@@ -7,13 +7,12 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "catalogues")
@@ -35,13 +34,8 @@ public class Catalogue {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
-    @ManyToMany
-    @JoinTable(
-            name = "catalogue_components",
-            joinColumns = @JoinColumn(name = "catalogue_id"),
-            inverseJoinColumns = @JoinColumn(name = "component_id")
-    )
-    private Set<Component> components = new LinkedHashSet<>();
+    @OneToMany(mappedBy = "catalogue", orphanRemoval = true)
+    private List<Component> components = new ArrayList<>();
 
     public Long getId() {
         return id;
@@ -79,11 +73,11 @@ public class Catalogue {
         this.owner = owner;
     }
 
-    public Set<Component> getComponents() {
+    public List<Component> getComponents() {
         return components;
     }
 
-    public void setComponents(Set<Component> components) {
+    public void setComponents(List<Component> components) {
         this.components = components;
     }
 }

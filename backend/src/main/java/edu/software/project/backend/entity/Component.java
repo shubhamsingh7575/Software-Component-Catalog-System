@@ -7,11 +7,10 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.ManyToMany;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 @Entity
 @Table(name = "components")
@@ -29,6 +28,9 @@ public class Component {
     @Column(length = 1000)
     private String keywords;
 
+    @Column(length = 20000)
+    private String body;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ComponentType type;
@@ -42,8 +44,9 @@ public class Component {
     @Column(nullable = false)
     private long searchedButNotUsedCount = 0;
 
-    @ManyToMany(mappedBy = "components")
-    private Set<Catalogue> catalogues = new LinkedHashSet<>();
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "catalogue_id", nullable = false)
+    private Catalogue catalogue;
 
     public Long getId() {
         return id;
@@ -71,6 +74,14 @@ public class Component {
 
     public void setKeywords(String keywords) {
         this.keywords = keywords;
+    }
+
+    public String getBody() {
+        return body;
+    }
+
+    public void setBody(String body) {
+        this.body = body;
     }
 
     public ComponentType getType() {
@@ -105,11 +116,11 @@ public class Component {
         this.searchedButNotUsedCount = searchedButNotUsedCount;
     }
 
-    public Set<Catalogue> getCatalogues() {
-        return catalogues;
+    public Catalogue getCatalogue() {
+        return catalogue;
     }
 
-    public void setCatalogues(Set<Catalogue> catalogues) {
-        this.catalogues = catalogues;
+    public void setCatalogue(Catalogue catalogue) {
+        this.catalogue = catalogue;
     }
 }

@@ -27,7 +27,7 @@ class BackendApplicationTests {
     private ObjectMapper objectMapper;
 
     @Test
-    void fullComponentLifecycleFlowWorks() throws Exception {
+    void fullCatalogueLifecycleFlowWorks() throws Exception {
         String registerResponse = mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -65,7 +65,7 @@ class BackendApplicationTests {
 
         Long catalogueId = objectMapper.readTree(catalogueResponse).get("id").asLong();
 
-        String componentResponse = mockMvc.perform(post("/api/components")
+        String componentResponse = mockMvc.perform(post("/api/catalogues/{catalogueId}/components", catalogueId)
                         .header("X-Auth-Token", token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -73,32 +73,29 @@ class BackendApplicationTests {
                                   "name": "Order UML",
                                   "description": "Class diagram for ordering",
                                   "keywords": "uml,order,design",
-                                  "type": "UML",
-                                  "catalogueIds": [%d]
+                                  "type": "UML"
                                 }
-                                """.formatted(catalogueId)))
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Order UML"))
-                .andExpect(jsonPath("$.catalogueIds[0]").value(catalogueId))
+                .andExpect(jsonPath("$.catalogueId").value(catalogueId))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
 
         Long componentId = objectMapper.readTree(componentResponse).get("id").asLong();
 
-        mockMvc.perform(get("/api/components/search")
+        mockMvc.perform(get("/api/catalogues")
                         .header("X-Auth-Token", token)
-                        .param("keywords", "uml"))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(componentId))
-                .andExpect(jsonPath("$[0].searchHitCount").value(1))
-                .andExpect(jsonPath("$[0].searchedButNotUsedCount").value(1));
+                .andExpect(jsonPath("$[0].id").value(catalogueId))
+                .andExpect(jsonPath("$[0].components[0].id").value(componentId));
 
-        mockMvc.perform(post("/api/components/{id}/use", componentId)
+        mockMvc.perform(post("/api/catalogues/{catalogueId}/components/{componentId}/use", catalogueId, componentId)
                         .header("X-Auth-Token", token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.usageCount").value(1))
-                .andExpect(jsonPath("$.searchedButNotUsedCount").value(0));
+                .andExpect(jsonPath("$.usageCount").value(1));
 
         mockMvc.perform(get("/api/users/me")
                         .header("X-Auth-Token", token))
@@ -137,7 +134,7 @@ class BackendApplicationTests {
 
     @Test
     void protectedEndpointsRequireToken() throws Exception {
-        mockMvc.perform(get("/api/components"))
+        mockMvc.perform(get("/api/catalogues"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Missing X-Auth-Token header"));
     }

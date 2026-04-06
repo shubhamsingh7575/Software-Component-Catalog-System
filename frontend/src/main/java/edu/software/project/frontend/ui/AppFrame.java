@@ -26,72 +26,119 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
-import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingWorker;
 import javax.swing.WindowConstants;
+import javax.swing.border.AbstractBorder;
+import javax.swing.border.EmptyBorder;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.table.JTableHeader;
 import java.awt.BorderLayout;
+import java.awt.BasicStroke;
+import java.awt.CardLayout;
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.FlowLayout;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.RenderingHints;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
+import java.util.prefs.Preferences;
 
 public class AppFrame extends JFrame {
     private static final String DEFAULT_BASE_URL = "http://localhost:8080";
+    private static final String PREF_BASE_URL = "baseUrl";
+    private static final String PREF_TOKEN = "token";
+    private static final Color PAGE = new Color(0xF6F7F9);
+    private static final Color PANEL = Color.WHITE;
+    private static final Color PANEL_STRONG = new Color(0xF0F4F8);
+    private static final Color INK = new Color(0x1F2937);
+    private static final Color MUTED = new Color(0x6B7280);
+    private static final Color ACCENT = new Color(0x2563EB);
+    private static final Color ACCENT_DARK = new Color(0x1D4ED8);
+    private static final Color TEAL = new Color(0x0F172A);
+    private static final Color LINE = new Color(0xD7DEE7);
+    private static final Color INPUT_BG = Color.WHITE;
+    private static final Color INPUT_BG_FOCUSED = new Color(0xF8FBFF);
+    private static final Color INPUT_BG_DISABLED = new Color(0xEEF2F7);
+    private static final Color INPUT_BORDER = new Color(0xCBD5E1);
+    private static final Color INPUT_BORDER_FOCUSED = ACCENT;
+    private static final Color INPUT_TEXT = INK;
+    private static final Color INPUT_PLACEHOLDER = new Color(0x9CA3AF);
+    private static final Color INPUT_SELECTION = new Color(0xBFDBFE);
+    private static final String VIEW_AUTH = "auth";
+    private static final String VIEW_CATALOGUES = "catalogues";
 
     private final ApiClient apiClient = new ApiClient();
+    private final Preferences preferences = Preferences.userNodeForPackage(AppFrame.class);
 
-    private final JTextField baseUrlField = new JTextField(DEFAULT_BASE_URL, 24);
+    private final PlaceholderTextField baseUrlField = new PlaceholderTextField("http://localhost:8080", 24);
     private final JLabel sessionLabel = new JLabel("Not signed in");
     private final JLabel statusLabel = new JLabel("Ready");
     private final JButton logoutButton = new JButton("Logout");
 
     private final AuthPanel authPanel = new AuthPanel();
-    private final CataloguePanel cataloguePanel = new CataloguePanel();
-    private final ComponentPanel componentPanel = new ComponentPanel();
+    private final CatalogueWorkspacePanel catalogueWorkspacePanel = new CatalogueWorkspacePanel();
+    private final CardLayout contentLayout = new CardLayout();
+    private final JPanel contentPanel = new JPanel(contentLayout);
 
     private Session session;
 
     public AppFrame() {
         super("Software Component Catalogue");
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        setSize(1260, 760);
+        setSize(1320, 820);
+        getContentPane().setBackground(PAGE);
         setLocationRelativeTo(null);
-        setLayout(new BorderLayout(12, 12));
+        setLayout(new BorderLayout(8, 8));
 
         add(buildTopBar(), BorderLayout.NORTH);
 
-        JTabbedPane tabs = new JTabbedPane();
-        tabs.addTab("Authentication", authPanel);
-        tabs.addTab("Catalogues", cataloguePanel);
-        tabs.addTab("Components", componentPanel);
-        add(tabs, BorderLayout.CENTER);
+        contentPanel.setOpaque(false);
+        contentPanel.setBorder(new EmptyBorder(0, 8, 0, 8));
+        contentPanel.add(authPanel, VIEW_AUTH);
+        contentPanel.add(catalogueWorkspacePanel, VIEW_CATALOGUES);
+        add(contentPanel, BorderLayout.CENTER);
 
         JPanel footer = new JPanel(new BorderLayout());
-        footer.setBorder(BorderFactory.createEmptyBorder(0, 12, 12, 12));
+        footer.setOpaque(false);
+        footer.setBorder(BorderFactory.createEmptyBorder(0, 8, 8, 8));
+        statusLabel.setForeground(MUTED);
         footer.add(statusLabel, BorderLayout.WEST);
         add(footer, BorderLayout.SOUTH);
 
         updateSession(null);
+        restorePersistedSession();
     }
 
     private JPanel buildTopBar() {
-        JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 0, 12));
+        JPanel panel = new CardPanel();
+        panel.setLayout(new BorderLayout(16, 0));
+        panel.setBorder(new EmptyBorder(12, 14, 12, 14));
 
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        left.add(new JLabel("Base URL"));
-        left.add(baseUrlField);
-        panel.add(left, BorderLayout.WEST);
+        JPanel left = transparent(new BorderLayout(0, 10));
+        JLabel title = new JLabel("Component Catalog Studio");
+        title.setFont(title.getFont().deriveFont(Font.BOLD, 28f));
+        title.setForeground(INK);
+        JLabel subtitle = new JLabel("Design catalogues, curate reusable components, and keep the workspace in sync.");
+        subtitle.setForeground(MUTED);
+        subtitle.setFont(subtitle.getFont().deriveFont(Font.PLAIN, 14f));
+        left.add(title, BorderLayout.NORTH);
+        left.add(subtitle, BorderLayout.SOUTH);
+        panel.add(left, BorderLayout.CENTER);
 
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JPanel right = transparent(new FlowLayout(FlowLayout.RIGHT, 10, 8));
+        sessionLabel.setForeground(INK);
+        sessionLabel.setFont(sessionLabel.getFont().deriveFont(Font.BOLD, 13f));
+        styleActionButton(logoutButton, false);
         logoutButton.addActionListener(event -> {
             if (session == null) {
                 updateSession(null);
@@ -101,7 +148,10 @@ public class AppFrame extends JFrame {
                 Session current = session;
                 apiClient.logout(current.baseUrl(), current.token());
                 return null;
-            }, ignored -> updateSession(null));
+            }, ignored -> {
+                clearPersistedSession();
+                updateSession(null);
+            });
         });
         right.add(sessionLabel);
         right.add(logoutButton);
@@ -110,25 +160,145 @@ public class AppFrame extends JFrame {
     }
 
     private void updateSession(Session newSession) {
-        this.session = newSession;
+        session = newSession;
         authPanel.refreshState();
-        cataloguePanel.refreshState();
-        componentPanel.refreshState();
+        catalogueWorkspacePanel.refreshState();
 
         if (newSession == null) {
+            contentLayout.show(contentPanel, VIEW_AUTH);
             sessionLabel.setText("Not signed in");
-            statusLabel.setText("Sign in to browse catalogues and components.");
+            statusLabel.setText("Sign in to manage catalogues.");
             logoutButton.setEnabled(false);
             return;
         }
 
+        persistSession(newSession);
+        contentLayout.show(contentPanel, VIEW_CATALOGUES);
         sessionLabel.setText(newSession.user().username() + " (" + newSession.user().role() + ")");
-        logoutButton.setEnabled(true);
         statusLabel.setText("Authenticated against " + newSession.baseUrl());
+        logoutButton.setEnabled(true);
+        catalogueWorkspacePanel.loadInitialCatalogues();
     }
 
     private String currentBaseUrl() {
         return baseUrlField.getText().trim().isEmpty() ? DEFAULT_BASE_URL : baseUrlField.getText().trim();
+    }
+
+    private void styleActionButton(JButton button, boolean primary) {
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(button.isEnabled() ? LINE : PANEL_STRONG, 1, true),
+                new EmptyBorder(10, 18, 10, 18)
+        ));
+        button.setContentAreaFilled(true);
+        button.setOpaque(true);
+        button.setBackground(Color.WHITE);
+        button.setForeground(button.isEnabled() ? INK : MUTED);
+        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
+        button.setMargin(new Insets(0, 0, 0, 0));
+    }
+
+    private void styleTextInput(JComponent component, int width) {
+        component.setPreferredSize(new Dimension(width, 40));
+        if (component instanceof JTextField textField) {
+            textField.setForeground(INPUT_TEXT);
+            textField.setCaretColor(INPUT_TEXT);
+            textField.setSelectionColor(INPUT_SELECTION);
+            textField.setSelectedTextColor(INK);
+            textField.setDisabledTextColor(MUTED);
+            textField.setOpaque(false);
+            textField.setBorder(new EmptyBorder(10, 12, 10, 12));
+            textField.setBackground(INPUT_BG);
+        } else {
+            component.setForeground(INK);
+            component.setBackground(Color.WHITE);
+            component.setOpaque(true);
+            component.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(LINE, 1, true),
+                    new EmptyBorder(8, 12, 8, 12)
+            ));
+        }
+    }
+
+    private void styleTextArea(JTextArea textArea, boolean codeLike) {
+        textArea.setBorder(new EmptyBorder(14, 14, 14, 14));
+        textArea.setBackground(codeLike ? new Color(0xFBFDFF) : Color.WHITE);
+        textArea.setForeground(INPUT_TEXT);
+        textArea.setCaretColor(INPUT_TEXT);
+        textArea.setSelectionColor(INPUT_SELECTION);
+        textArea.setSelectedTextColor(INK);
+        textArea.setDisabledTextColor(MUTED);
+        if (codeLike) {
+            textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));
+        }
+    }
+
+    private void styleTable(JTable table) {
+        table.setRowHeight(34);
+        table.setShowGrid(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.setSelectionBackground(new Color(0xE7F1F0));
+        table.setSelectionForeground(INK);
+        table.setBackground(Color.WHITE);
+        table.setForeground(INK);
+        table.setFillsViewportHeight(true);
+        JTableHeader header = table.getTableHeader();
+        header.setReorderingAllowed(false);
+        header.setOpaque(true);
+        header.setBackground(PANEL_STRONG);
+        header.setForeground(INK);
+        header.setBorder(new EmptyBorder(8, 8, 8, 8));
+    }
+
+    private static JPanel transparent(java.awt.LayoutManager layout) {
+        JPanel panel = new JPanel(layout);
+        panel.setOpaque(false);
+        return panel;
+    }
+
+    private void restorePersistedSession() {
+        String persistedToken = preferences.get(PREF_TOKEN, "").trim();
+        String persistedBaseUrl = preferences.get(PREF_BASE_URL, "").trim();
+        if (!persistedBaseUrl.isEmpty()) {
+            baseUrlField.setText(persistedBaseUrl);
+        }
+        if (persistedToken.isEmpty()) {
+            return;
+        }
+
+        statusLabel.setText("Restoring saved session...");
+        new SwingWorker<Session, Void>() {
+            @Override
+            protected Session doInBackground() {
+                String baseUrl = persistedBaseUrl.isEmpty() ? DEFAULT_BASE_URL : persistedBaseUrl;
+                UserProfile profile = apiClient.getCurrentUser(baseUrl, persistedToken);
+                return new Session(baseUrl, persistedToken, profile);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    updateSession(get());
+                    statusLabel.setText("Restored saved session");
+                } catch (Exception exception) {
+                    clearPersistedSession();
+                    statusLabel.setText("Saved session expired. Sign in again.");
+                }
+            }
+        }.execute();
+    }
+
+    private void persistSession(Session session) {
+        preferences.put(PREF_BASE_URL, session.baseUrl());
+        preferences.put(PREF_TOKEN, session.token());
+    }
+
+    private void clearPersistedSession() {
+        preferences.remove(PREF_TOKEN);
+        String currentBaseUrl = baseUrlField.getText().trim();
+        if (!currentBaseUrl.isEmpty()) {
+            preferences.put(PREF_BASE_URL, currentBaseUrl);
+        }
     }
 
     private <T> void runAction(String actionName, Callable<T> task, ResultConsumer<T> consumer) {
@@ -179,9 +349,13 @@ public class AppFrame extends JFrame {
                 fieldRow("Description", descriptionField),
                 fieldRow("Keywords", keywordsField)
         );
-        int result = JOptionPane.showConfirmDialog(this, panel,
+        int result = JOptionPane.showConfirmDialog(
+                this,
+                panel,
                 existing == null ? "Create Catalogue" : "Update Catalogue",
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
         if (result != JOptionPane.OK_OPTION) {
             return null;
         }
@@ -192,9 +366,9 @@ public class AppFrame extends JFrame {
         JTextField nameField = new JTextField(existing == null ? "" : existing.name(), 24);
         JTextField descriptionField = new JTextField(existing == null ? "" : existing.description(), 24);
         JTextField keywordsField = new JTextField(existing == null ? "" : existing.keywords(), 24);
-        JTextField catalogueIdsField = new JTextField(existing == null
-                ? ""
-                : existing.catalogueIds().stream().map(String::valueOf).collect(Collectors.joining(",")), 24);
+        JTextArea bodyArea = new JTextArea(existing == null ? "" : existing.body(), 10, 24);
+        bodyArea.setLineWrap(true);
+        bodyArea.setWrapStyleWord(true);
         JComboBox<ComponentType> typeBox = new JComboBox<>(new DefaultComboBoxModel<>(ComponentType.values()));
         typeBox.setSelectedItem(existing == null ? ComponentType.CODE : existing.type());
 
@@ -202,12 +376,16 @@ public class AppFrame extends JFrame {
                 fieldRow("Name", nameField),
                 fieldRow("Description", descriptionField),
                 fieldRow("Keywords", keywordsField),
-                fieldRow("Type", typeBox),
-                fieldRow("Catalogue IDs", catalogueIdsField)
+                fieldRow("Body", new JScrollPane(bodyArea)),
+                fieldRow("Type", typeBox)
         );
-        int result = JOptionPane.showConfirmDialog(this, panel,
-                existing == null ? "Create Component" : "Update Component",
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+        int result = JOptionPane.showConfirmDialog(
+                this,
+                panel,
+                existing == null ? "Add Component" : "Update Component",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
         if (result != JOptionPane.OK_OPTION) {
             return null;
         }
@@ -215,31 +393,13 @@ public class AppFrame extends JFrame {
                 nameField.getText().trim(),
                 descriptionField.getText().trim(),
                 keywordsField.getText().trim(),
-                (ComponentType) typeBox.getSelectedItem(),
-                parseIds(catalogueIdsField.getText())
+                bodyArea.getText(),
+                (ComponentType) typeBox.getSelectedItem()
         );
     }
 
-    private List<Long> parseIds(String rawIds) {
-        List<Long> ids = new ArrayList<>();
-        if (rawIds == null || rawIds.isBlank()) {
-            return ids;
-        }
-        for (String token : rawIds.split(",")) {
-            String trimmed = token.trim();
-            if (!trimmed.isEmpty()) {
-                try {
-                    ids.add(Long.parseLong(trimmed));
-                } catch (NumberFormatException exception) {
-                    throw new ApiException("Catalogue IDs must be comma-separated numbers.");
-                }
-            }
-        }
-        return ids;
-    }
-
-    private static JPanel formPanel(JComponent... rows) {
-        JPanel panel = new JPanel();
+    private JPanel formPanel(JComponent... rows) {
+        JPanel panel = transparent(null);
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         for (JComponent row : rows) {
             row.setAlignmentX(JComponent.LEFT_ALIGNMENT);
@@ -249,31 +409,63 @@ public class AppFrame extends JFrame {
         return panel;
     }
 
-    private static JPanel fieldRow(String label, JComponent field) {
+    private JPanel fieldRow(String label, JComponent field) {
         JPanel row = new JPanel(new BorderLayout(8, 8));
-        row.add(new JLabel(label), BorderLayout.WEST);
+        row.setOpaque(false);
+        JLabel labelComponent = new JLabel(label);
+        labelComponent.setForeground(MUTED);
+        labelComponent.setPreferredSize(new Dimension(100, 24));
+        row.add(labelComponent, BorderLayout.WEST);
         row.add(field, BorderLayout.CENTER);
+        int rowHeight = Math.max(field.getPreferredSize().height, 32) + 8;
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, rowHeight));
         return row;
     }
 
-    private final class AuthPanel extends JPanel {
-        private final JTextField loginEmailField = new JTextField("admin@example.com", 24);
-        private final JPasswordField loginPasswordField = new JPasswordField("StrongPass1!", 24);
+    private JPanel wrapInCard(String title, String subtitle, JComponent body) {
+        JPanel panel = new CardPanel();
+        panel.setLayout(new BorderLayout(0, 10));
+        panel.add(sectionHeader(title, subtitle), BorderLayout.NORTH);
+        panel.add(body, BorderLayout.CENTER);
+        return panel;
+    }
 
-        private final JTextField registerNameField = new JTextField("Admin User", 24);
-        private final JTextField registerEmailField = new JTextField("admin@example.com", 24);
-        private final JPasswordField registerPasswordField = new JPasswordField("StrongPass1!", 24);
-        private final JPasswordField registerConfirmField = new JPasswordField("StrongPass1!", 24);
+    private JComponent sectionHeader(String title, String subtitle) {
+        JPanel panel = transparent(new BorderLayout(0, 4));
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 18f));
+        titleLabel.setForeground(INK);
+        JLabel subtitleLabel = new JLabel(subtitle);
+        subtitleLabel.setForeground(MUTED);
+        subtitleLabel.setFont(subtitleLabel.getFont().deriveFont(Font.PLAIN, 13f));
+        panel.add(titleLabel, BorderLayout.NORTH);
+        panel.add(subtitleLabel, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private final class AuthPanel extends JPanel {
+        private final PlaceholderTextField loginEmailField = new PlaceholderTextField("Email", 24);
+        private final PlaceholderPasswordField loginPasswordField = new PlaceholderPasswordField("Password", 24);
+
+        private final PlaceholderTextField registerNameField = new PlaceholderTextField("Username", 24);
+        private final PlaceholderTextField registerEmailField = new PlaceholderTextField("Email", 24);
+        private final PlaceholderPasswordField registerPasswordField = new PlaceholderPasswordField("Password", 24);
+        private final PlaceholderPasswordField registerConfirmField = new PlaceholderPasswordField("Confirm password", 24);
 
         private AuthPanel() {
-            setLayout(new GridLayout(1, 2, 16, 16));
-            setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+            setOpaque(false);
+            setLayout(new GridLayout(1, 2, 12, 12));
+            setBorder(BorderFactory.createEmptyBorder(12, 10, 12, 10));
             add(buildLoginPanel());
             add(buildRegisterPanel());
         }
 
         private JPanel buildLoginPanel() {
-            JButton loginButton = new JButton("Login");
+            JButton loginButton = new JButton("Log In");
+            styleActionButton(loginButton, true);
+            styleTextInput(loginEmailField, 280);
+            styleTextInput(loginPasswordField, 280);
+            styleTextInput(baseUrlField, 280);
             loginButton.addActionListener(event -> runAction("Login", () -> {
                 String baseUrl = currentBaseUrl();
                 var auth = apiClient.login(baseUrl, new LoginRequest(
@@ -284,18 +476,25 @@ public class AppFrame extends JFrame {
                 return new Session(baseUrl, auth.token(), profile);
             }, AppFrame.this::updateSession));
 
-            JPanel panel = new JPanel(new BorderLayout());
-            panel.setBorder(BorderFactory.createTitledBorder("Existing User"));
+            JPanel panel = new CardPanel();
+            panel.setLayout(new BorderLayout(0, 16));
+            panel.add(sectionHeader("Welcome Back", "Resume work with your existing catalogue account."), BorderLayout.NORTH);
             panel.add(formPanel(
+                    fieldRow("Server", baseUrlField),
                     fieldRow("Email", loginEmailField),
                     fieldRow("Password", loginPasswordField),
                     fieldRow("", loginButton)
-            ), BorderLayout.NORTH);
+            ), BorderLayout.CENTER);
             return panel;
         }
 
         private JPanel buildRegisterPanel() {
             JButton registerButton = new JButton("Register");
+            styleActionButton(registerButton, false);
+            styleTextInput(registerNameField, 280);
+            styleTextInput(registerEmailField, 280);
+            styleTextInput(registerPasswordField, 280);
+            styleTextInput(registerConfirmField, 280);
             registerButton.addActionListener(event -> runAction("Register", () -> {
                 String baseUrl = currentBaseUrl();
                 var auth = apiClient.register(baseUrl, new RegisterRequest(
@@ -308,15 +507,16 @@ public class AppFrame extends JFrame {
                 return new Session(baseUrl, auth.token(), profile);
             }, AppFrame.this::updateSession));
 
-            JPanel panel = new JPanel(new BorderLayout());
-            panel.setBorder(BorderFactory.createTitledBorder("New User"));
+            JPanel panel = new CardPanel();
+            panel.setLayout(new BorderLayout(0, 16));
+            panel.add(sectionHeader("Create Account", "Start a fresh workspace and keep your catalogues synced."), BorderLayout.NORTH);
             panel.add(formPanel(
                     fieldRow("Username", registerNameField),
                     fieldRow("Email", registerEmailField),
                     fieldRow("Password", registerPasswordField),
                     fieldRow("Confirm", registerConfirmField),
                     fieldRow("", registerButton)
-            ), BorderLayout.NORTH);
+            ), BorderLayout.CENTER);
             return panel;
         }
 
@@ -324,114 +524,337 @@ public class AppFrame extends JFrame {
         }
     }
 
-    private final class CataloguePanel extends JPanel {
-        private final CatalogueTableModel tableModel = new CatalogueTableModel();
-        private final JTable table = new JTable(tableModel);
-        private final JTextArea detailsArea = new JTextArea();
+    private final class CatalogueWorkspacePanel extends JPanel {
+        private final CatalogueTableModel catalogueTableModel = new CatalogueTableModel();
+        private final JTable catalogueTable = new JTable(catalogueTableModel);
+        private final ComponentTableModel componentTableModel = new ComponentTableModel();
+        private final JTable componentTable = new JTable(componentTableModel);
+        private final JTextArea catalogueDetailsArea = new JTextArea();
+        private final JTextArea componentDetailsArea = new JTextArea();
 
-        private CataloguePanel() {
-            setLayout(new BorderLayout(12, 12));
-            setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        private CatalogueWorkspacePanel() {
+            setOpaque(false);
+            setLayout(new BorderLayout(10, 10));
+            setBorder(BorderFactory.createEmptyBorder(12, 10, 12, 10));
 
-            JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT));
+            JPanel actions = new CardPanel();
+            actions.setLayout(new FlowLayout(FlowLayout.LEFT, 8, 6));
             JButton refreshAllButton = new JButton("Refresh All");
             JButton refreshMineButton = new JButton("Refresh Mine");
-            JButton createButton = new JButton("Create");
-            JButton updateButton = new JButton("Update");
-            JButton deleteButton = new JButton("Delete");
+            JButton createCatalogueButton = new JButton("Create Catalogue");
+            JButton updateCatalogueButton = new JButton("Update Catalogue");
+            JButton deleteCatalogueButton = new JButton("Delete Catalogue");
+            JButton addComponentButton = new JButton("Add Component");
+            JButton updateComponentButton = new JButton("Update Component");
+            JButton deleteComponentButton = new JButton("Delete Component");
+            JButton useComponentButton = new JButton("Record Use");
 
-            refreshAllButton.addActionListener(event -> runAction("Load catalogues", () -> {
-                Session current = requireSession();
-                return apiClient.getCatalogues(current.baseUrl(), current.token());
-            }, result -> tableModel.setItems(result)));
-            refreshMineButton.addActionListener(event -> runAction("Load my catalogues", () -> {
-                Session current = requireSession();
-                return apiClient.getMyCatalogues(current.baseUrl(), current.token());
-            }, result -> tableModel.setItems(result)));
-            createButton.addActionListener(event -> {
-                CatalogueRequest request = promptCatalogue(null);
-                if (request == null) {
-                    return;
-                }
-                runAction("Create catalogue", () -> {
-                    Session current = requireSession();
-                    apiClient.createCatalogue(current.baseUrl(), current.token(), request);
-                    return apiClient.getMyCatalogues(current.baseUrl(), current.token());
-                }, result -> {
-                    tableModel.setItems(result);
-                    statusLabel.setText("Catalogue created");
-                });
-            });
-            updateButton.addActionListener(event -> {
-                Catalogue selected = tableModel.getSelected(table.getSelectedRow());
-                if (selected == null) {
-                    JOptionPane.showMessageDialog(this, "Select a catalogue first.");
-                    return;
-                }
-                CatalogueRequest request = promptCatalogue(selected);
-                if (request == null) {
-                    return;
-                }
-                runAction("Update catalogue", () -> {
-                    Session current = requireSession();
-                    apiClient.updateCatalogue(current.baseUrl(), current.token(), selected.id(), request);
-                    return apiClient.getMyCatalogues(current.baseUrl(), current.token());
-                }, tableModel::setItems);
-            });
-            deleteButton.addActionListener(event -> {
-                Catalogue selected = tableModel.getSelected(table.getSelectedRow());
-                if (selected == null) {
-                    JOptionPane.showMessageDialog(this, "Select a catalogue first.");
-                    return;
-                }
-                int confirm = JOptionPane.showConfirmDialog(this,
-                        "Delete catalogue " + selected.name() + "?",
-                        "Confirm Delete", JOptionPane.YES_NO_OPTION);
-                if (confirm != JOptionPane.YES_OPTION) {
-                    return;
-                }
-                runAction("Delete catalogue", () -> {
-                    Session current = requireSession();
-                    apiClient.deleteCatalogue(current.baseUrl(), current.token(), selected.id());
-                    return apiClient.getMyCatalogues(current.baseUrl(), current.token());
-                }, tableModel::setItems);
-            });
+            styleActionButton(refreshAllButton, false);
+            styleActionButton(refreshMineButton, false);
+            styleActionButton(createCatalogueButton, true);
+            styleActionButton(updateCatalogueButton, false);
+            styleActionButton(deleteCatalogueButton, false);
+            styleActionButton(addComponentButton, true);
+            styleActionButton(updateComponentButton, false);
+            styleActionButton(deleteComponentButton, false);
+            styleActionButton(useComponentButton, false);
+
+            refreshAllButton.addActionListener(event -> loadCatalogues(false));
+            refreshMineButton.addActionListener(event -> loadCatalogues(true));
+            createCatalogueButton.addActionListener(event -> createCatalogue());
+            updateCatalogueButton.addActionListener(event -> updateCatalogue());
+            deleteCatalogueButton.addActionListener(event -> deleteCatalogue());
+            addComponentButton.addActionListener(event -> createComponent());
+            updateComponentButton.addActionListener(event -> updateComponent());
+            deleteComponentButton.addActionListener(event -> deleteComponent());
+            useComponentButton.addActionListener(event -> recordUsage());
 
             actions.add(refreshAllButton);
             actions.add(refreshMineButton);
-            actions.add(createButton);
-            actions.add(updateButton);
-            actions.add(deleteButton);
+            actions.add(createCatalogueButton);
+            actions.add(updateCatalogueButton);
+            actions.add(deleteCatalogueButton);
+            actions.add(addComponentButton);
+            actions.add(updateComponentButton);
+            actions.add(deleteComponentButton);
+            actions.add(useComponentButton);
 
-            table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-            table.getSelectionModel().addListSelectionListener(event -> showCatalogueDetails());
-            JScrollPane tableScroll = new JScrollPane(table);
+            styleTable(catalogueTable);
+            styleTable(componentTable);
+            catalogueTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+            catalogueTable.getSelectionModel().addListSelectionListener(event -> onCatalogueSelected());
+            componentTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+            componentTable.getSelectionModel().addListSelectionListener(event -> showComponentDetails(selectedComponent()));
 
-            detailsArea.setEditable(false);
-            detailsArea.setLineWrap(true);
-            detailsArea.setWrapStyleWord(true);
-            JScrollPane detailsScroll = new JScrollPane(detailsArea);
-            detailsScroll.setPreferredSize(new Dimension(320, 400));
-
-            JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, tableScroll, detailsScroll);
-            splitPane.setResizeWeight(0.72);
+            JSplitPane horizontalSplit = new JSplitPane(
+                    JSplitPane.HORIZONTAL_SPLIT,
+                    wrapInCard("Catalogues", "Choose a catalogue to manage its components.", new JScrollPane(catalogueTable)),
+                    buildDetailsPane()
+            );
+            horizontalSplit.setOpaque(false);
+            horizontalSplit.setBorder(BorderFactory.createEmptyBorder());
+            horizontalSplit.setResizeWeight(0.42);
 
             add(actions, BorderLayout.NORTH);
-            add(splitPane, BorderLayout.CENTER);
+            add(horizontalSplit, BorderLayout.CENTER);
         }
 
-        private void showCatalogueDetails() {
-            Catalogue selected = tableModel.getSelected(table.getSelectedRow());
-            if (selected == null) {
-                detailsArea.setText("No catalogue selected.");
+        private void loadInitialCatalogues() {
+            runAction("Load catalogues", () -> {
+                Session current = requireSession();
+                return apiClient.getCatalogues(current.baseUrl(), current.token());
+            }, catalogues -> {
+                catalogueTableModel.setItems(catalogues);
+                componentTableModel.setItems(List.of());
+                showCatalogueDetails(null);
+                showComponentDetails(null);
+                if (!catalogues.isEmpty()) {
+                    catalogueTable.setRowSelectionInterval(0, 0);
+                    onCatalogueSelected();
+                }
+            });
+        }
+
+        private JPanel buildDetailsPane() {
+            JPanel panel = transparent(new BorderLayout(10, 10));
+
+            catalogueDetailsArea.setEditable(false);
+            catalogueDetailsArea.setLineWrap(true);
+            catalogueDetailsArea.setWrapStyleWord(true);
+            styleTextArea(catalogueDetailsArea, false);
+
+            componentDetailsArea.setEditable(false);
+            componentDetailsArea.setLineWrap(true);
+            componentDetailsArea.setWrapStyleWord(true);
+            styleTextArea(componentDetailsArea, true);
+
+            JScrollPane catalogueDetailsScroll = new JScrollPane(catalogueDetailsArea);
+            catalogueDetailsScroll.setPreferredSize(new Dimension(420, 170));
+            catalogueDetailsScroll.setBorder(BorderFactory.createEmptyBorder());
+
+            JScrollPane componentTableScroll = new JScrollPane(componentTable);
+            componentTableScroll.setBorder(BorderFactory.createEmptyBorder());
+            JScrollPane componentDetailsScroll = new JScrollPane(componentDetailsArea);
+            componentDetailsScroll.setPreferredSize(new Dimension(420, 135));
+            componentDetailsScroll.setBorder(BorderFactory.createEmptyBorder());
+
+            JSplitPane componentSplit = new JSplitPane(
+                    JSplitPane.VERTICAL_SPLIT,
+                    wrapInCard("Components", "Everything inside the selected catalogue lives here.", componentTableScroll),
+                    wrapInCard("Component Detail", "Content, metadata, and usage signals.", componentDetailsScroll)
+            );
+            componentSplit.setOpaque(false);
+            componentSplit.setBorder(BorderFactory.createEmptyBorder());
+            componentSplit.setResizeWeight(0.55);
+
+            JSplitPane verticalSplit = new JSplitPane(
+                    JSplitPane.VERTICAL_SPLIT,
+                    wrapInCard("Catalogue Detail", "Context, ownership, and the current inventory.", catalogueDetailsScroll),
+                    componentSplit
+            );
+            verticalSplit.setOpaque(false);
+            verticalSplit.setBorder(BorderFactory.createEmptyBorder());
+            verticalSplit.setResizeWeight(0.34);
+
+            panel.add(verticalSplit, BorderLayout.CENTER);
+            return panel;
+        }
+
+        private void loadCatalogues(boolean mineOnly) {
+            runAction(mineOnly ? "Load my catalogues" : "Load catalogues", () -> {
+                Session current = requireSession();
+                return mineOnly
+                        ? apiClient.getMyCatalogues(current.baseUrl(), current.token())
+                        : apiClient.getCatalogues(current.baseUrl(), current.token());
+            }, catalogues -> {
+                catalogueTableModel.setItems(catalogues);
+                componentTableModel.setItems(List.of());
+                showCatalogueDetails(null);
+                showComponentDetails(null);
+            });
+        }
+
+        private void createCatalogue() {
+            CatalogueRequest request = promptCatalogue(null);
+            if (request == null) {
                 return;
             }
-            String componentNames = selected.components().isEmpty()
-                    ? "None"
-                    : selected.components().stream()
-                    .map(component -> component.id() + " - " + component.name() + " (" + component.type() + ")")
-                    .collect(Collectors.joining("\n"));
-            detailsArea.setText("""
+            runAction("Create catalogue", () -> {
+                Session current = requireSession();
+                apiClient.createCatalogue(current.baseUrl(), current.token(), request);
+                return apiClient.getMyCatalogues(current.baseUrl(), current.token());
+            }, catalogues -> {
+                catalogueTableModel.setItems(catalogues);
+                statusLabel.setText("Catalogue created");
+            });
+        }
+
+        private void updateCatalogue() {
+            Catalogue selected = selectedCatalogue();
+            if (selected == null) {
+                JOptionPane.showMessageDialog(this, "Select a catalogue first.");
+                return;
+            }
+            CatalogueRequest request = promptCatalogue(selected);
+            if (request == null) {
+                return;
+            }
+            runAction("Update catalogue", () -> {
+                Session current = requireSession();
+                apiClient.updateCatalogue(current.baseUrl(), current.token(), selected.id(), request);
+                return apiClient.getMyCatalogues(current.baseUrl(), current.token());
+            }, this::replaceCataloguesAndKeepSelection);
+        }
+
+        private void deleteCatalogue() {
+            Catalogue selected = selectedCatalogue();
+            if (selected == null) {
+                JOptionPane.showMessageDialog(this, "Select a catalogue first.");
+                return;
+            }
+            int confirm = JOptionPane.showConfirmDialog(
+                    this,
+                    "Delete catalogue " + selected.name() + " and all of its components?",
+                    "Confirm Delete",
+                    JOptionPane.YES_NO_OPTION
+            );
+            if (confirm != JOptionPane.YES_OPTION) {
+                return;
+            }
+            runAction("Delete catalogue", () -> {
+                Session current = requireSession();
+                apiClient.deleteCatalogue(current.baseUrl(), current.token(), selected.id());
+                return apiClient.getMyCatalogues(current.baseUrl(), current.token());
+            }, catalogues -> {
+                catalogueTableModel.setItems(catalogues);
+                componentTableModel.setItems(List.of());
+                showCatalogueDetails(null);
+                showComponentDetails(null);
+            });
+        }
+
+        private void createComponent() {
+            if (!ensureAdmin()) {
+                return;
+            }
+            Catalogue selectedCatalogue = selectedCatalogue();
+            if (selectedCatalogue == null) {
+                JOptionPane.showMessageDialog(this, "Select a catalogue first.");
+                return;
+            }
+            ComponentRequest request = promptComponent(null);
+            if (request == null) {
+                return;
+            }
+            runAction("Add component", () -> {
+                Session current = requireSession();
+                apiClient.createComponent(current.baseUrl(), current.token(), selectedCatalogue.id(), request);
+                return apiClient.getMyCatalogues(current.baseUrl(), current.token());
+            }, this::replaceCataloguesAndKeepSelection);
+        }
+
+        private void updateComponent() {
+            if (!ensureAdmin()) {
+                return;
+            }
+            Catalogue selectedCatalogue = selectedCatalogue();
+            Component selectedComponent = selectedComponent();
+            if (selectedCatalogue == null || selectedComponent == null) {
+                JOptionPane.showMessageDialog(this, "Select a catalogue and component first.");
+                return;
+            }
+            ComponentRequest request = promptComponent(selectedComponent);
+            if (request == null) {
+                return;
+            }
+            runAction("Update component", () -> {
+                Session current = requireSession();
+                apiClient.updateComponent(
+                        current.baseUrl(),
+                        current.token(),
+                        selectedCatalogue.id(),
+                        selectedComponent.id(),
+                        request
+                );
+                return apiClient.getMyCatalogues(current.baseUrl(), current.token());
+            }, catalogues -> replaceCataloguesAndKeepSelection(catalogues, selectedCatalogue.id(), selectedComponent.id()));
+        }
+
+        private void deleteComponent() {
+            if (!ensureAdmin()) {
+                return;
+            }
+            Catalogue selectedCatalogue = selectedCatalogue();
+            Component selectedComponent = selectedComponent();
+            if (selectedCatalogue == null || selectedComponent == null) {
+                JOptionPane.showMessageDialog(this, "Select a catalogue and component first.");
+                return;
+            }
+            int confirm = JOptionPane.showConfirmDialog(
+                    this,
+                    "Delete component " + selectedComponent.name() + "?",
+                    "Confirm Delete",
+                    JOptionPane.YES_NO_OPTION
+            );
+            if (confirm != JOptionPane.YES_OPTION) {
+                return;
+            }
+            runAction("Delete component", () -> {
+                Session current = requireSession();
+                apiClient.deleteComponent(current.baseUrl(), current.token(), selectedCatalogue.id(), selectedComponent.id());
+                return apiClient.getMyCatalogues(current.baseUrl(), current.token());
+            }, catalogues -> replaceCataloguesAndKeepSelection(catalogues, selectedCatalogue.id(), -1));
+        }
+
+        private void recordUsage() {
+            Catalogue selectedCatalogue = selectedCatalogue();
+            Component selectedComponent = selectedComponent();
+            if (selectedCatalogue == null || selectedComponent == null) {
+                JOptionPane.showMessageDialog(this, "Select a catalogue and component first.");
+                return;
+            }
+            runAction("Record usage", () -> {
+                Session current = requireSession();
+                apiClient.useComponent(current.baseUrl(), current.token(), selectedCatalogue.id(), selectedComponent.id());
+                return apiClient.getCatalogues(current.baseUrl(), current.token());
+            }, catalogues -> replaceCataloguesAndKeepSelection(catalogues, selectedCatalogue.id(), selectedComponent.id()));
+        }
+
+        private boolean ensureAdmin() {
+            if (session == null) {
+                JOptionPane.showMessageDialog(this, "Sign in first.");
+                return false;
+            }
+            if (!session.isAdmin()) {
+                JOptionPane.showMessageDialog(this, "Only ADMIN users can manage catalogue contents.");
+                return false;
+            }
+            return true;
+        }
+
+        private Catalogue selectedCatalogue() {
+            return catalogueTableModel.getSelected(catalogueTable.getSelectedRow());
+        }
+
+        private Component selectedComponent() {
+            return componentTableModel.getSelected(componentTable.getSelectedRow());
+        }
+
+        private void onCatalogueSelected() {
+            Catalogue selected = selectedCatalogue();
+            componentTableModel.setItems(selected == null ? List.of() : selected.components());
+            showCatalogueDetails(selected);
+            showComponentDetails(null);
+        }
+
+        private void showCatalogueDetails(Catalogue catalogue) {
+            if (catalogue == null) {
+                catalogueDetailsArea.setText(session == null
+                        ? "Sign in to load catalogues."
+                        : "Select a catalogue to view and manage its components.");
+                return;
+            }
+            catalogueDetailsArea.setText("""
                     Catalogue ID: %d
                     Name: %s
                     Owner: %s (#%d)
@@ -442,176 +865,24 @@ public class AppFrame extends JFrame {
                     Keywords:
                     %s
 
-                    Components:
-                    %s
+                    Components: %d
                     """.formatted(
-                    selected.id(),
-                    valueOrEmpty(selected.name()),
-                    valueOrEmpty(selected.ownerUsername()),
-                    selected.ownerId(),
-                    valueOrEmpty(selected.description()),
-                    valueOrEmpty(selected.keywords()),
-                    componentNames
+                    catalogue.id(),
+                    valueOrEmpty(catalogue.name()),
+                    valueOrEmpty(catalogue.ownerUsername()),
+                    catalogue.ownerId(),
+                    valueOrEmpty(catalogue.description()),
+                    valueOrEmpty(catalogue.keywords()),
+                    catalogue.components().size()
             ));
         }
 
-        private void refreshState() {
-            tableModel.setItems(List.of());
-            detailsArea.setText(session == null ? "Sign in to load catalogues." : "Use Refresh All or Refresh Mine.");
-        }
-    }
-
-    private final class ComponentPanel extends JPanel {
-        private final ComponentTableModel tableModel = new ComponentTableModel();
-        private final JTable table = new JTable(tableModel);
-        private final JTextArea detailsArea = new JTextArea();
-        private final JTextField searchField = new JTextField(20);
-        private final JTextField idLookupField = new JTextField(8);
-
-        private ComponentPanel() {
-            setLayout(new BorderLayout(12, 12));
-            setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-
-            JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT));
-            JButton refreshButton = new JButton("Refresh All");
-            JButton searchButton = new JButton("Search");
-            JButton fetchByIdButton = new JButton("Fetch By ID");
-            JButton useButton = new JButton("Record Use");
-            JButton createButton = new JButton("Create");
-            JButton updateButton = new JButton("Update");
-            JButton deleteButton = new JButton("Delete");
-
-            refreshButton.addActionListener(event -> runAction("Load components", () -> {
-                Session current = requireSession();
-                return apiClient.getComponents(current.baseUrl(), current.token());
-            }, tableModel::setItems));
-            searchButton.addActionListener(event -> runAction("Search components", () -> {
-                Session current = requireSession();
-                return apiClient.searchComponents(current.baseUrl(), current.token(), searchField.getText().trim());
-            }, tableModel::setItems));
-            fetchByIdButton.addActionListener(event -> runAction("Fetch component", () -> {
-                Session current = requireSession();
-                Component component = apiClient.getComponent(current.baseUrl(), current.token(), Long.parseLong(idLookupField.getText().trim()));
-                return List.of(component);
-            }, tableModel::setItems));
-            useButton.addActionListener(event -> {
-                Component selected = tableModel.getSelected(table.getSelectedRow());
-                if (selected == null) {
-                    JOptionPane.showMessageDialog(this, "Select a component first.");
-                    return;
-                }
-                runAction("Record component usage", () -> {
-                    Session current = requireSession();
-                    Component updated = apiClient.useComponent(current.baseUrl(), current.token(), selected.id());
-                    return List.of(updated);
-                }, tableModel::setItems);
-            });
-            createButton.addActionListener(event -> {
-                if (!ensureAdmin()) {
-                    return;
-                }
-                ComponentRequest request = promptComponent(null);
-                if (request == null) {
-                    return;
-                }
-                runAction("Create component", () -> {
-                    Session current = requireSession();
-                    apiClient.createComponent(current.baseUrl(), current.token(), request);
-                    return apiClient.getComponents(current.baseUrl(), current.token());
-                }, tableModel::setItems);
-            });
-            updateButton.addActionListener(event -> {
-                if (!ensureAdmin()) {
-                    return;
-                }
-                Component selected = tableModel.getSelected(table.getSelectedRow());
-                if (selected == null) {
-                    JOptionPane.showMessageDialog(this, "Select a component first.");
-                    return;
-                }
-                ComponentRequest request = promptComponent(selected);
-                if (request == null) {
-                    return;
-                }
-                runAction("Update component", () -> {
-                    Session current = requireSession();
-                    apiClient.updateComponent(current.baseUrl(), current.token(), selected.id(), request);
-                    return apiClient.getComponents(current.baseUrl(), current.token());
-                }, tableModel::setItems);
-            });
-            deleteButton.addActionListener(event -> {
-                if (!ensureAdmin()) {
-                    return;
-                }
-                Component selected = tableModel.getSelected(table.getSelectedRow());
-                if (selected == null) {
-                    JOptionPane.showMessageDialog(this, "Select a component first.");
-                    return;
-                }
-                int confirm = JOptionPane.showConfirmDialog(this,
-                        "Delete component " + selected.name() + "?",
-                        "Confirm Delete", JOptionPane.YES_NO_OPTION);
-                if (confirm != JOptionPane.YES_OPTION) {
-                    return;
-                }
-                runAction("Delete component", () -> {
-                    Session current = requireSession();
-                    apiClient.deleteComponent(current.baseUrl(), current.token(), selected.id());
-                    return apiClient.getComponents(current.baseUrl(), current.token());
-                }, tableModel::setItems);
-            });
-
-            actions.add(refreshButton);
-            actions.add(new JLabel("Keywords"));
-            actions.add(searchField);
-            actions.add(searchButton);
-            actions.add(new JLabel("Component ID"));
-            actions.add(idLookupField);
-            actions.add(fetchByIdButton);
-            actions.add(useButton);
-            actions.add(createButton);
-            actions.add(updateButton);
-            actions.add(deleteButton);
-
-            table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-            table.getSelectionModel().addListSelectionListener(event -> showComponentDetails());
-            JScrollPane tableScroll = new JScrollPane(table);
-
-            detailsArea.setEditable(false);
-            detailsArea.setLineWrap(true);
-            detailsArea.setWrapStyleWord(true);
-            JScrollPane detailsScroll = new JScrollPane(detailsArea);
-            detailsScroll.setPreferredSize(new Dimension(360, 400));
-
-            JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, tableScroll, detailsScroll);
-            splitPane.setResizeWeight(0.72);
-
-            add(actions, BorderLayout.NORTH);
-            add(splitPane, BorderLayout.CENTER);
-        }
-
-        private boolean ensureAdmin() {
-            if (session == null) {
-                JOptionPane.showMessageDialog(this, "Sign in first.");
-                return false;
-            }
-            if (!session.isAdmin()) {
-                JOptionPane.showMessageDialog(this, "Only ADMIN users can manage components.");
-                return false;
-            }
-            return true;
-        }
-
-        private void showComponentDetails() {
-            Component selected = tableModel.getSelected(table.getSelectedRow());
-            if (selected == null) {
-                detailsArea.setText("No component selected.");
+        private void showComponentDetails(Component component) {
+            if (component == null) {
+                componentDetailsArea.setText("Select a component inside the current catalogue.");
                 return;
             }
-            String catalogues = selected.catalogueIds().isEmpty()
-                    ? "None"
-                    : selected.catalogueIds().stream().map(String::valueOf).collect(Collectors.joining(", "));
-            detailsArea.setText("""
+            componentDetailsArea.setText("""
                     Component ID: %d
                     Name: %s
                     Type: %s
@@ -622,26 +893,62 @@ public class AppFrame extends JFrame {
                     Keywords:
                     %s
 
+                    Body:
+                    %s
+
                     Usage Count: %d
                     Search Hit Count: %d
                     Searched But Not Used: %d
-                    Catalogue IDs: %s
                     """.formatted(
-                    selected.id(),
-                    valueOrEmpty(selected.name()),
-                    selected.type(),
-                    valueOrEmpty(selected.description()),
-                    valueOrEmpty(selected.keywords()),
-                    selected.usageCount(),
-                    selected.searchHitCount(),
-                    selected.searchedButNotUsedCount(),
-                    catalogues
+                    component.id(),
+                    valueOrEmpty(component.name()),
+                    component.type(),
+                    valueOrEmpty(component.description()),
+                    valueOrEmpty(component.keywords()),
+                    valueOrEmpty(component.body()),
+                    component.usageCount(),
+                    component.searchHitCount(),
+                    component.searchedButNotUsedCount()
             ));
         }
 
+        private void replaceCataloguesAndKeepSelection(List<Catalogue> catalogues) {
+            Catalogue selectedCatalogue = selectedCatalogue();
+            long catalogueId = selectedCatalogue == null ? -1 : selectedCatalogue.id();
+            replaceCataloguesAndKeepSelection(catalogues, catalogueId, -1);
+        }
+
+        private void replaceCataloguesAndKeepSelection(List<Catalogue> catalogues, long catalogueId, long componentId) {
+            catalogueTableModel.setItems(catalogues);
+
+            int catalogueRow = catalogueTableModel.indexOf(catalogueId);
+            if (catalogueRow < 0) {
+                componentTableModel.setItems(List.of());
+                showCatalogueDetails(null);
+                showComponentDetails(null);
+                return;
+            }
+
+            catalogueTable.setRowSelectionInterval(catalogueRow, catalogueRow);
+            Catalogue selected = catalogueTableModel.getSelected(catalogueRow);
+            componentTableModel.setItems(selected.components());
+            showCatalogueDetails(selected);
+
+            int componentRow = componentTableModel.indexOf(componentId);
+            if (componentRow >= 0) {
+                componentTable.setRowSelectionInterval(componentRow, componentRow);
+                showComponentDetails(componentTableModel.getSelected(componentRow));
+            } else {
+                componentTable.clearSelection();
+                showComponentDetails(null);
+            }
+        }
+
         private void refreshState() {
-            tableModel.setItems(List.of());
-            detailsArea.setText(session == null ? "Sign in to load components." : "Use Refresh All, Search, or Fetch By ID.");
+            catalogueTableModel.setItems(List.of());
+            componentTableModel.setItems(List.of());
+            showCatalogueDetails(null);
+            showComponentDetails(null);
         }
     }
 
@@ -656,6 +963,15 @@ public class AppFrame extends JFrame {
 
         public Catalogue getSelected(int row) {
             return row >= 0 && row < items.size() ? items.get(row) : null;
+        }
+
+        public int indexOf(long catalogueId) {
+            for (int i = 0; i < items.size(); i++) {
+                if (items.get(i).id() == catalogueId) {
+                    return i;
+                }
+            }
+            return -1;
         }
 
         @Override
@@ -700,6 +1016,15 @@ public class AppFrame extends JFrame {
             return row >= 0 && row < items.size() ? items.get(row) : null;
         }
 
+        public int indexOf(long componentId) {
+            for (int i = 0; i < items.size(); i++) {
+                if (items.get(i).id() == componentId) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
         @Override
         public int getRowCount() {
             return items.size();
@@ -730,8 +1055,111 @@ public class AppFrame extends JFrame {
         }
     }
 
+    private static final class CardPanel extends JPanel {
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            super.paintComponent(graphics);
+            Graphics2D graphics2D = (Graphics2D) graphics.create();
+            graphics2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            graphics2D.setColor(PANEL);
+            graphics2D.fillRoundRect(0, 0, getWidth(), getHeight(), 28, 28);
+            graphics2D.setColor(LINE);
+            graphics2D.setStroke(new BasicStroke(1f));
+            graphics2D.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 28, 28);
+            graphics2D.dispose();
+        }
+
+        private CardPanel() {
+            setOpaque(false);
+            setBorder(new EmptyBorder(12, 12, 12, 12));
+        }
+    }
+
     @FunctionalInterface
     private interface ResultConsumer<T> {
         void accept(T value);
+    }
+
+    private static class PlaceholderTextField extends JTextField {
+        private final String placeholder;
+
+        private PlaceholderTextField(String placeholder, int columns) {
+            super(columns);
+            this.placeholder = placeholder;
+            setOpaque(false);
+            setBorder(new EmptyBorder(10, 12, 10, 12));
+        }
+
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            paintFieldSurface(this, graphics);
+            super.paintComponent(graphics);
+            if (!getText().isEmpty() || isFocusOwner()) {
+                return;
+            }
+            Graphics2D graphics2D = (Graphics2D) graphics.create();
+            graphics2D.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            graphics2D.setColor(INPUT_PLACEHOLDER);
+            graphics2D.drawString(placeholder, getInsets().left + 2, graphics.getFontMetrics().getMaxAscent() + getInsets().top + 2);
+            graphics2D.dispose();
+        }
+
+        @Override
+        protected void paintBorder(Graphics graphics) {
+            paintFieldOutline(this, graphics);
+        }
+    }
+
+    private static final class PlaceholderPasswordField extends JPasswordField {
+        private final String placeholder;
+
+        private PlaceholderPasswordField(String placeholder, int columns) {
+            super(columns);
+            this.placeholder = placeholder;
+            setOpaque(false);
+            setBorder(new EmptyBorder(10, 12, 10, 12));
+        }
+
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            paintFieldSurface(this, graphics);
+            super.paintComponent(graphics);
+            if (getPassword().length > 0 || isFocusOwner()) {
+                return;
+            }
+            Graphics2D graphics2D = (Graphics2D) graphics.create();
+            graphics2D.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            graphics2D.setColor(INPUT_PLACEHOLDER);
+            graphics2D.drawString(placeholder, getInsets().left + 2, graphics.getFontMetrics().getMaxAscent() + getInsets().top + 2);
+            graphics2D.dispose();
+        }
+
+        @Override
+        protected void paintBorder(Graphics graphics) {
+            paintFieldOutline(this, graphics);
+        }
+    }
+
+    private static void paintFieldSurface(JTextField field, Graphics graphics) {
+        Graphics2D graphics2D = (Graphics2D) graphics.create();
+        graphics2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        graphics2D.setColor(resolveFieldBackground(field));
+        graphics2D.fillRoundRect(0, 0, field.getWidth(), field.getHeight(), 12, 12);
+        graphics2D.dispose();
+    }
+
+    private static void paintFieldOutline(JTextField field, Graphics graphics) {
+        Graphics2D graphics2D = (Graphics2D) graphics.create();
+        graphics2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        graphics2D.setColor(field.isFocusOwner() && field.isEnabled() ? INPUT_BORDER_FOCUSED : INPUT_BORDER);
+        graphics2D.drawRoundRect(0, 0, field.getWidth() - 1, field.getHeight() - 1, 12, 12);
+        graphics2D.dispose();
+    }
+
+    private static Color resolveFieldBackground(JTextField field) {
+        if (!field.isEnabled() || !field.isEditable()) {
+            return INPUT_BG_DISABLED;
+        }
+        return field.isFocusOwner() ? INPUT_BG_FOCUSED : INPUT_BG;
     }
 }
