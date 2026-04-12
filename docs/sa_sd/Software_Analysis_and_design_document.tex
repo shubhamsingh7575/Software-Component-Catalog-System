@@ -1,9 +1,10 @@
-
 \documentclass[12pt]{article}
 
 \usepackage[a4paper,margin=1in]{geometry}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta, positioning}
+\usepackage{float}          % FIX 1: needed for [H] figure placement
+\usepackage{graphicx}       % FIX 2: needed for \includegraphics
 \usepackage{longtable}
 \usepackage{booktabs}
 \usepackage{enumitem}
@@ -51,99 +52,50 @@ The design should support future enhancement without major restructuring. For ex
     \item \textbf{Admin}: oversees stored records and monitors catalogue-related information.
 \end{itemize}
 
-\section{Features}
+\section{Structured Analysis and Structured Design (SA/SD)}
 
-\subsection{Functional Decomposition}
-The system can be divided into the following major functions:
+\subsection{Structured Analysis: Data Flow Diagrams (DFD)}
+The Structured Analysis utilizes Data Flow Diagrams to represent functional decomposition.
 
-\begin{center}
-\begin{tikzpicture}[
-    node distance=10mm and 16mm,
-    box/.style={draw, rounded corners, align=center, minimum width=5.0cm, minimum height=0.95cm},
-    sub/.style={draw, rounded corners, align=center, minimum width=3.8cm, minimum height=0.8cm}
-]
-\node[box] (root) {Software Component\\Cataloguing System};
+\subsubsection{Level 0: Context Diagram}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{level0.png}
+    \caption{System Context Diagram (Level 0)}
+\end{figure}
 
-\node[sub, below left=of root] (u) {User Management};
-\node[sub, below=of root] (c) {Catalogue Management};
-\node[sub, below right=of root] (s) {Search and Retrieval};
+\subsubsection{Level 1: Data Flow Diagram}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{level1.png}
+    \caption{Data Flow Diagram (Level 1)}
+\end{figure}
 
-\node[sub, below=of c, yshift=-2mm] (m) {Component Management};
-\node[sub, below=of m] (t) {Usage Tracking};
+\subsection{Level 2: Structured Design}
 
-\draw[-{Stealth[length=2mm]}] (root) -- (u);
-\draw[-{Stealth[length=2mm]}] (root) -- (c);
-\draw[-{Stealth[length=2mm]}] (root) -- (s);
-\draw[-{Stealth[length=2mm]}] (c) -- (m);
-\draw[-{Stealth[length=2mm]}] (m) -- (t);
-\end{tikzpicture}
-\end{center}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Authentication.png}
+    \caption{Level 2 - Authentication Module}
+\end{figure}
 
-\subsection{Context Diagram}
-The context diagram shows the system as a single process interacting with the external user.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{Component_management.png}
+    \caption{Level 2 - Component Management Module}
+\end{figure}
 
-\begin{center}
-\begin{tikzpicture}[
-    entity/.style={draw, rounded corners, align=center, minimum width=3.5cm, minimum height=1.2cm},
-    process/.style={draw, circle, align=center, minimum size=3.8cm},
-    flow/.style={-{Stealth[length=2mm]}, thick}
-]
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{File Handling1.png}
+    \caption{Level 2 - File Handling Module}
+\end{figure}
 
-\node[entity] (user) at (-5,0) {User / Developer};
-\node[process] (sys) at (2,0) {Software\\Component\\Cataloguing\\System};
-
-\draw[flow] (user.north east) -- node[above, font=\small] {login, search, add component} (sys.north west);
-\draw[flow] (sys.south west) -- node[below, font=\small] {results, confirmations} (user.south east);
-
-\end{tikzpicture}
-\end{center}
-
-\subsection{DFD Level 1}
-The system is divided into the following high-level processes:
-\begin{enumerate}[leftmargin=1.2cm]
-    \item Authenticate User
-    \item Manage Catalogue
-    \item Manage Component Records
-    \item Search Components
-    \item Track Usage
-\end{enumerate}
-
-\begin{center}
-\begin{tikzpicture}[
-    entity/.style={draw, rounded corners, align=center, minimum width=2.8cm, minimum height=0.9cm},
-    process/.style={draw, rounded corners, align=center, minimum width=3.4cm, minimum height=0.9cm},
-    store/.style={draw, minimum width=2.8cm, minimum height=0.8cm, align=center},
-    flow/.style={-{Stealth[length=2mm]}, thick}
-]
-\node[entity] (user) at (-6,1.5) {User / Developer};
-
-\node[process] (p1) at (-1.5,2.2) {1. Authenticate\\User};
-\node[process] (p2) at (3.2,2.2) {2. Manage\\Catalogue};
-\node[process] (p3) at (-1.5,-0.2) {3. Manage\\Component Records};
-\node[process] (p4) at (3.2,-0.2) {4. Search\\Components};
-\node[process] (p5) at (3.2,-2.4) {5. Track\\Usage};
-
-\node[store] (d1) at (0.9,4.0) {D1 User Data};
-\node[store] (d2) at (4.9,4.0) {D2 Catalogue Data};
-\node[store] (d3) at (4.9,-4.0) {D3 Component Data};
-\node[store] (d4) at (0.9,-4.0) {D4 Usage Data};
-
-\draw[flow] (user) -- (p1);
-\draw[flow] (p1) -- (d1);
-
-\draw[flow] (user) -- (p2);
-\draw[flow] (p2) -- (d2);
-
-\draw[flow] (user) -- (p3);
-\draw[flow] (p3) -- (d3);
-
-\draw[flow] (user) -- (p4);
-\draw[flow] (p4) -- (d3);
-
-\draw[flow] (p4) -- (p5);
-\draw[flow] (p5) -- (d4);
-\end{tikzpicture}
-\end{center}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{search.png}
+    \caption{Level 2 - Search Module}
+\end{figure}
 
 \subsection{Process Flow Descriptions}
 
@@ -177,6 +129,7 @@ The system is divided into the following high-level processes:
 \toprule
 \textbf{Data Item} & \textbf{Type} & \textbf{Description} \\
 \midrule
+\endhead
 UserID & Integer & Unique identifier for each user \\
 Username & String & Login and display name \\
 Email & String & User email address \\
@@ -246,10 +199,10 @@ The system is organized into the following modules:
 
 \section{Distribution Plan}
 \subsection{Deployment View}
-The system is deployed as a client-server application.
+The system is deployed as a web application.
 \begin{itemize}[leftmargin=1.2cm]
-    \item Users access the system through a desktop client.
-    \item The frontend communicates with backend services over HTTP.
+    \item Users access the system through a browser.
+    \item The frontend communicates with backend services.
     \item The backend stores data in the database.
 \end{itemize}
 
