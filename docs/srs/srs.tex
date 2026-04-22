@@ -89,12 +89,13 @@ The major functions of the system include:
 
 \section{Tech Stack}
 
-The Software Component Cataloguing System is implemented as a client-server application to keep the user interface and backend services clearly separated.
+The Software Component Cataloguing System is developed using a modern web-based technology stack to ensure scalability, performance, and ease of maintenance.
 
 \begin{itemize}
     \item \textbf{Frontend:}
     \begin{itemize}
-        \item Java Swing desktop client for the interactive user interface
+        \item React.js for building an interactive and dynamic user interface
+        \item JavaSwing for structure and styling
     \end{itemize}
     
     \item \textbf{Backend:}
@@ -282,36 +283,20 @@ This relational design ensures efficient storage, retrieval, and reuse of softwa
 \chapter{System Models}
 
 \section{Use Case Diagram}
-
-\begin{figure}[h!]
-\centering
-\fbox{\parbox{12cm}{
-Admin → Add/Delete Component \\
-User → Search Component
-}}
-\caption{Use Case Diagram}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=1\linewidth]{8.jpeg}    
 \end{figure}
-
-\section{Data Flow Diagram}
-
-\begin{figure}[h!]
-\centering
-\fbox{\parbox{12cm}{
-User → Query → System → Database → Result
-}}
-\caption{DFD}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=1\linewidth]{9.jpeg}    
 \end{figure}
 
 \section{Architecture Diagram}
-
-\begin{figure}[h!]
-\centering
-\fbox{\parbox{12cm}{
-Frontend → Backend → Database
-}}
-\caption{System Architecture}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=1\linewidth]{10.jpeg}    
 \end{figure}
-
 %--------------------------------------------------
 \chapter{Non-Functional Requirements}
 
