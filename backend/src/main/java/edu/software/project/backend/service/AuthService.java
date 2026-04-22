@@ -50,7 +50,7 @@ public class AuthService {
         user.setUsername(normalizedUsername);
         user.setEmail(normalizedEmail);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setRole(userRepository.count() == 0 ? Role.ADMIN : Role.USER);
+        user.setRole(Role.USER);
 
         User savedUser = userRepository.save(user);
         String token = sessionService.createSession(savedUser);

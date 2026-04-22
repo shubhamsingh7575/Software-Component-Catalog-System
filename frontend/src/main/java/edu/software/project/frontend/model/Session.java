@@ -5,7 +5,4 @@ public record Session(
         String token,
         UserProfile user
 ) {
-    public boolean isAdmin() {
-        return user != null && user.role() == Role.ADMIN;
-    }
 }

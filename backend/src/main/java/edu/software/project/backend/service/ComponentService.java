@@ -4,7 +4,6 @@ import edu.software.project.backend.dto.ComponentRequest;
 import edu.software.project.backend.dto.ComponentResponse;
 import edu.software.project.backend.entity.Catalogue;
 import edu.software.project.backend.entity.Component;
-import edu.software.project.backend.entity.Role;
 import edu.software.project.backend.exception.ApiException;
 import edu.software.project.backend.repository.CatalogueRepository;
 import edu.software.project.backend.repository.ComponentRepository;
@@ -63,7 +62,6 @@ public class ComponentService {
 
     @Transactional
     public ComponentResponse createComponent(Long catalogueId, ComponentRequest request, AuthenticatedUser currentUser) {
-        requireAdmin(currentUser);
         Catalogue catalogue = requireOwnedCatalogue(catalogueId, currentUser);
 
         Component component = new Component();
@@ -78,7 +76,6 @@ public class ComponentService {
             ComponentRequest request,
             AuthenticatedUser currentUser
     ) {
-        requireAdmin(currentUser);
         Catalogue catalogue = requireOwnedCatalogue(catalogueId, currentUser);
         Component component = componentRepository.findByIdAndCatalogueId(componentId, catalogueId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Component not found in this catalogue"));
@@ -88,7 +85,6 @@ public class ComponentService {
 
     @Transactional
     public void deleteComponent(Long catalogueId, Long componentId, AuthenticatedUser currentUser) {
-        requireAdmin(currentUser);
         requireOwnedCatalogue(catalogueId, currentUser);
         Component component = componentRepository.findByIdAndCatalogueId(componentId, catalogueId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Component not found in this catalogue"));
@@ -122,12 +118,6 @@ public class ComponentService {
             throw new ApiException(HttpStatus.FORBIDDEN, "Catalogue access denied");
         }
         return catalogue;
-    }
-
-    private void requireAdmin(AuthenticatedUser currentUser) {
-        if (currentUser.role() != Role.ADMIN) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Admin role required");
-        }
     }
 
     private List<String> parseTerms(String keywords) {

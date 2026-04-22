@@ -798,9 +798,6 @@ public class AppFrame extends JFrame {
         }
 
         private void createComponent() {
-            if (!ensureAdmin()) {
-                return;
-            }
             Catalogue selectedCatalogue = selectedCatalogue();
             if (selectedCatalogue == null) {
                 JOptionPane.showMessageDialog(this, "Select a catalogue first.");
@@ -818,9 +815,6 @@ public class AppFrame extends JFrame {
         }
 
         private void updateComponent() {
-            if (!ensureAdmin()) {
-                return;
-            }
             Catalogue selectedCatalogue = selectedCatalogue();
             Component selectedComponent = selectedComponent();
             if (selectedCatalogue == null || selectedComponent == null) {
@@ -845,9 +839,6 @@ public class AppFrame extends JFrame {
         }
 
         private void deleteComponent() {
-            if (!ensureAdmin()) {
-                return;
-            }
             Catalogue selectedCatalogue = selectedCatalogue();
             Component selectedComponent = selectedComponent();
             if (selectedCatalogue == null || selectedComponent == null) {
@@ -882,18 +873,6 @@ public class AppFrame extends JFrame {
                 apiClient.useComponent(current.baseUrl(), current.token(), selectedCatalogue.id(), selectedComponent.id());
                 return apiClient.getCatalogues(current.baseUrl(), current.token());
             }, catalogues -> replaceCataloguesAndKeepSelection(catalogues, selectedCatalogue.id(), selectedComponent.id()));
-        }
-
-        private boolean ensureAdmin() {
-            if (session == null) {
-                JOptionPane.showMessageDialog(this, "Sign in first.");
-                return false;
-            }
-            if (!session.isAdmin()) {
-                JOptionPane.showMessageDialog(this, "Only ADMIN users can manage catalogue contents.");
-                return false;
-            }
-            return true;
         }
 
         private Catalogue selectedCatalogue() {
