@@ -1,0 +1,351 @@
+\documentclass[12pt]{scrreprt}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\hypersetup{hidelinks}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+\title{\textbf{Software Requirement Specification (SRS)}\\
+\large Software Component Cataloguing System}
+\author{Prepared by: Shubham Singh}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+%--------------------------------------------------
+\chapter{Introduction}
+
+\section{Purpose}
+The purpose of this Software Requirement Specification (SRS) document is to provide a detailed description of the \textbf{Software Component Cataloguing System}. This system is designed to store, manage, and retrieve reusable software components efficiently.
+
+In modern software development, reuse of components significantly reduces development time and cost. However, without proper organization, locating reusable components becomes difficult. This system addresses that issue by providing a centralized catalogue.
+
+\section{Scope}
+The system will:
+\begin{itemize}
+    \item Maintain a repository of reusable software components
+    \item Support both design (UML, ERD) and code components
+    \item Allow keyword-based searching
+    \item Track usage statistics of components
+    \item Support hierarchical classification of components
+\end{itemize}
+
+\section{Intended Audience}
+This document is intended for:
+\begin{itemize}
+    \item Developers
+    \item System Designers
+    \item Project Managers
+    \item Testers
+\end{itemize}
+
+\vfill{}
+\section{Definitions}
+\begin{longtable}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Term} & \textbf{Description} \\
+\hline
+Component & A reusable piece of software (code or design) \\
+Catalogue & Database storing components \\
+Keyword & Tag used for searching components \\
+Metadata & Information describing components \\
+\hline
+\end{longtable}
+
+%--------------------------------------------------
+\chapter{Overall Description}
+
+\section{Product Perspective}
+The Software Component Cataloguing System is a standalone application that acts as a repository for reusable components. It can also be integrated into larger development environments.
+
+\section{Product Functions}
+The major functions of the system include:
+\begin{itemize}
+    \item Adding new components
+    \item Deleting existing components
+    \item Updating component information
+    \item Searching components using keywords
+    \item Viewing usage statistics
+\end{itemize}
+
+\section{User Classes}
+\begin{itemize}
+    \item \textbf{User (Developer):}
+    \begin{itemize}
+        \item The user interacts with the system to search, browse, and utilize reusable software components.
+        \item Users can query the catalogue using keywords to find relevant components.
+        \item Users can view component details such as type, usage statistics, and associated metadata.
+        \item Users indirectly contribute to the system by increasing usage statistics when components are accessed or reused.
+    \end{itemize}
+\end{itemize}
+
+\section{Tech Stack}
+
+The Software Component Cataloguing System is developed using a modern web-based technology stack to ensure scalability, performance, and ease of maintenance.
+
+\begin{itemize}
+    \item \textbf{Frontend:}
+    \begin{itemize}
+        \item React.js for building an interactive and dynamic user interface
+        \item JavaSwing for structure and styling
+    \end{itemize}
+    
+    \item \textbf{Backend:}
+    \begin{itemize}
+        \item Spring boot for handling server-side logic and API development
+        \item RESTful APIs for communication between frontend and backend
+    \end{itemize}
+    
+    \item \textbf{Database:}
+    \begin{itemize}
+        \item SQL (mySQL database) for storing component data and metadata
+        \item Flexible schema to handle different types of components (code/design)
+    \end{itemize}
+    
+    \item \textbf{Operating System Support:}
+    \begin{itemize}
+        \item Compatible with Windows, Linux, and MacOS environments
+    \end{itemize}
+\end{itemize}
+
+%--------------------------------------------------
+\chapter{System Features}
+
+\section{Feature 1: Add Component}
+
+\textbf{Description:} The user can add new software components into the catalogue. This feature allows the system to grow continuously by storing reusable components along with their associated metadata.
+
+\textbf{Inputs:}
+\begin{itemize}
+    \item Component Name
+    \item Type (Code/Design)
+    \item Keywords
+\end{itemize}
+
+\textbf{Processing:}
+\begin{itemize}
+    \item The system validates the input data provided by the user
+    \item Ensures that mandatory fields are not empty
+    \item Stores the component information in the database
+\end{itemize}
+
+\textbf{Output:}
+\begin{itemize}
+    \item Confirmation message indicating successful addition of the component
+\end{itemize}
+
+\section{Feature 2: Search Component}
+Users can search components using keywords.
+
+\begin{itemize}
+    \item Supports multiple keyword search
+    \item Returns ranked results
+\end{itemize}
+
+\section{Feature 3: Usage Tracking}
+System maintains:
+\begin{itemize}
+    \item Number of times component used
+    \item Number of times searched but not used
+\end{itemize}
+
+\section{Feature 4: User Registration (Sign Up)}
+
+\textbf{Description:} This feature allows a new user to create an account in the system. Registration is required to access the functionalities of the Software Component Cataloguing System.
+
+\textbf{Inputs:}
+\begin{itemize}
+    \item Username
+    \item Email Address
+    \item Password
+    \item Confirm Password
+\end{itemize}
+
+\textbf{Processing:}
+\begin{itemize}
+    \item The system validates all input fields
+    \item Checks whether the email already exists in the database
+    \item Verifies password strength and confirmation match
+    \item Encrypts the password for secure storage
+    \item Stores the user details in the database
+\end{itemize}
+
+\textbf{Output:}
+\begin{itemize}
+    \item Successful registration message
+    \item Redirect to login page
+\end{itemize}
+
+\section{Feature 5: User Login}
+
+\textbf{Description:} This feature allows registered users to securely log in to the system and access its functionalities such as searching and managing components.
+
+\textbf{Inputs:}
+\begin{itemize}
+    \item Email Address
+    \item Password
+\end{itemize}
+
+\textbf{Processing:}
+\begin{itemize}
+    \item The system verifies the entered credentials with stored data
+    \item Password is validated using encrypted comparison
+    \item If credentials are correct, user session is created
+\end{itemize}
+
+\textbf{Output:}
+\begin{itemize}
+    \item Successful login and access to dashboard
+    \item Error message for invalid credentials
+\end{itemize}
+
+%--------------------------------------------------
+\chapter{Data Design}
+
+\section{Database Schema}
+
+The system database is designed to efficiently manage users, components, and catalogues. The schema follows a relational structure where entities are interconnected to support component organization and retrieval.
+
+\subsection{User Table}
+
+\begin{longtable}{|p{3cm}|p{3cm}|p{7cm}|}
+\hline
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\hline
+UserID & Integer & Unique identifier for each user \\
+Email & String & User's email address (unique) \\
+Password & String & Encrypted user password \\
+Username & String & Display name of the user \\
+\hline
+\end{longtable}
+
+\textbf{Relationship:} A user can create and manage multiple catalogues.
+
+\vspace{0.5cm}
+
+\subsection{Component Table}
+
+\begin{longtable}{|p{3cm}|p{3cm}|p{7cm}|}
+\hline
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\hline
+ComponentID & Integer & Unique identifier for each component \\
+ComponentName & String & Name of the component \\
+Description & Text & Detailed explanation of the component \\
+Keywords & String & Tags used for searching \\
+\hline
+\end{longtable}
+
+\textbf{Relationship:} A component can belong to one or more catalogues.
+
+\vspace{0.5cm}
+
+\subsection{Catalogue Table}
+
+\begin{longtable}{|p{3cm}|p{3cm}|p{7cm}|}
+\hline
+\textbf{Field} & \textbf{Type} & \textbf{Description} \\
+\hline
+CatalogueID & Integer & Unique identifier for catalogue \\
+CatalogueName & String & Name of the catalogue \\
+Description & Text & Description of the catalogue \\
+Keywords & String & Tags for searching catalogues \\
+\hline
+\end{longtable}
+
+\textbf{Relationship:}
+\begin{itemize}
+    \item A catalogue contains multiple components
+    \item A user can own multiple catalogues
+\end{itemize}
+
+\vspace{0.5cm}
+
+\subsection{Entity Relationship Overview}
+
+\begin{itemize}
+    \item One User → Many Catalogues
+    \item One Catalogue → Many Components
+    \item Components can be reused across multiple catalogues
+\end{itemize}
+
+This relational design ensures efficient storage, retrieval, and reuse of software components within the system.
+
+%--------------------------------------------------
+\chapter{System Models}
+
+\section{Use Case Diagram}
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=1\linewidth]{use_case_diagram.jpeg}    
+\end{figure}
+
+%--------------------------------------------------
+\chapter{Non-Functional Requirements}
+
+\section{Performance}
+\begin{itemize}
+    \item Response time < 2 seconds
+    \item Efficient search algorithm
+\end{itemize}
+
+\section{Security}
+\begin{itemize}
+    \item Authentication required
+    \item Role-based access control
+\end{itemize}
+
+\section{Reliability}
+\begin{itemize}
+    \item 99\% uptime
+\end{itemize}
+
+\section{Scalability}
+System should handle thousands of components efficiently.
+
+%--------------------------------------------------
+\chapter{Charts and Analysis}
+
+\section{Component Usage Distribution}
+
+\begin{figure}[h!]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    symbolic x coords={Component A, Component B, Component C, Component D, Component E},
+    xtick=data,
+    ylabel={Usage Frequency},
+    xlabel={Components},
+    nodes near coords,
+    bar width=15pt,
+    height=8cm,
+    width=12cm,
+    xticklabel style={rotate=30, anchor=east}
+]
+\addplot coordinates {
+    (Component A, 15)
+    (Component B, 25)
+    (Component C, 10)
+    (Component D, 30)
+    (Component E, 20)
+};
+\end{axis}
+\end{tikzpicture}
+\caption{Bar Chart showing usage frequency of components}
+\end{figure}
+
+%--------------------------------------------------
+\chapter{Conclusion}
+
+The Software Component Cataloguing System enhances software development by promoting reuse, reducing redundancy, and improving productivity. It provides an efficient mechanism for storing and retrieving reusable components.
+
+\end{document}
